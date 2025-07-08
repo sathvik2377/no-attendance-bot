@@ -145,7 +145,7 @@ class BITSATBot:
 
         comment_text = comment.body.strip()
 
-        # Always respond to comments starting with "!"
+        # Always respond to comments starting with "!" (these are cutoff commands)
         if comment_text.startswith('!'):
             return True
 
@@ -160,17 +160,13 @@ class BITSATBot:
         comment_text = comment.body.strip()
         author_name = comment.author.name if comment.author else "anonymous"
 
-        # Check if this is a cutoff-related query
-        if self._is_specific_cutoff_query(comment_text):
+        # Handle ! commands first (these are always cutoff related)
+        if comment_text.startswith('!'):
             return self._generate_cutoff_response(author_name, comment_text)
 
-        # For "!" commands that aren't cutoff-related
-        if comment_text.startswith('!'):
-            clean_text = comment_text[1:].strip()
-            words = clean_text.lower().split()
-            meaningful_words = [w for w in words if len(w) > 3 and w not in
-                              ['that', 'this', 'with', 'have', 'will', 'been', 'from', 'they', 'were', 'said', 'what', 'when', 'where', 'how']]
-            return self._create_unique_response(author_name, clean_text, meaningful_words)
+        # Check if this is a specific cutoff query in natural language
+        if self._is_specific_cutoff_query(comment_text):
+            return self._generate_cutoff_response(author_name, comment_text)
 
         # This shouldn't happen with current logic, but just in case
         return self._create_unique_response(author_name, comment_text, [])
