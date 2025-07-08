@@ -117,12 +117,24 @@ class BITSATBot:
         if comment.author is None:
             return False
 
-        # Respond to comments starting with "!"
-        if comment.body.strip().startswith('!'):
+        # Don't respond to bots (AutoModerator, other bots)
+        if comment.author:
+            author_name = comment.author.name.lower()
+            bot_names = [
+                'automoderator', 'automod', 'moderator', 'bot', '_bot', 'reddit',
+                'snapshillbot', 'totesmessenger', 'remindmebot', 'wikisummarizerbot'
+            ]
+            if any(bot_name in author_name for bot_name in bot_names):
+                return False
+
+        comment_text = comment.body.strip()
+
+        # Always respond to comments starting with "!"
+        if comment_text.startswith('!'):
             return True
 
-        # Use improved cutoff query detection
-        if self._is_cutoff_query(comment.body):
+        # Only respond to VERY SPECIFIC cutoff queries (not general comments)
+        if self._is_specific_cutoff_query(comment.body):
             return True
 
         return False
@@ -133,7 +145,7 @@ class BITSATBot:
         author_name = comment.author.name if comment.author else "anonymous"
 
         # Check if this is a cutoff-related query
-        if self._is_cutoff_query(comment_text):
+        if self._is_specific_cutoff_query(comment_text):
             return self._generate_cutoff_response(author_name, comment_text)
 
         # For "!" commands that aren't cutoff-related
@@ -147,70 +159,34 @@ class BITSATBot:
         # This shouldn't happen with current logic, but just in case
         return self._create_unique_response(author_name, comment_text, [])
 
-    def _is_cutoff_query(self, comment_text):
-        """Intelligently analyze comment by breaking it into words"""
-        text_lower = comment_text.lower()
+    def _is_specific_cutoff_query(self, comment_text):
+        """Only respond to VERY SPECIFIC cutoff queries"""
+        text_lower = comment_text.lower().strip()
 
-        # Break comment into words for better analysis
-        words = text_lower.split()
-
-        # Remove common stop words for better analysis
-        stop_words = {'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'with', 'to', 'for', 'of', 'as', 'by'}
-        meaningful_words = [word for word in words if word not in stop_words and len(word) > 2]
-
-        # Direct cutoff terms
-        cutoff_terms = {
-            'cutoff', 'cutoffs', 'cut-off', 'cut-offs', 'minimum', 'required', 'needed',
-            'admission', 'qualifying', 'entrance', 'score', 'scores', 'marks', 'points'
-        }
-
-        # Question indicators
-        question_words = {'what', 'how', 'tell', 'show', 'give', 'share', 'know', 'kya', 'kitne', 'batao', 'bata', 'chahiye'}
-
-        # Campus terms with variations
-        campus_terms = {
-            'pilani', 'goa', 'hyderabad', 'hyd', 'bits', 'campus', 'campuses'
-        }
-
-        # Branch terms with variations
-        branch_terms = {
-            'cse', 'computer', 'science', 'cs', 'ece', 'electronics', 'communication',
-            'eee', 'electrical', 'mechanical', 'mech', 'chemical', 'chem', 'civil',
-            'manufacturing', 'manuf', 'mathematics', 'math', 'maths', 'computing',
-            'biology', 'bio', 'biological', 'physics', 'phy', 'chemistry', 'economics',
-            'eco', 'pharmacy', 'pharm', 'instrumentation', 'instru'
-        }
-
-        # Check for word combinations
-        has_cutoff_term = any(word in cutoff_terms for word in meaningful_words)
-        has_question = any(word in question_words for word in meaningful_words)
-        has_campus = any(word in campus_terms for word in meaningful_words)
-        has_branch = any(word in branch_terms for word in meaningful_words)
-
-        # Advanced pattern matching
-        patterns = [
-            # Direct cutoff mentions
-            has_cutoff_term,
-
-            # Question + campus combination
-            has_question and has_campus,
-
-            # Question + branch combination
-            has_question and has_branch,
-
-            # Campus + score/marks
-            has_campus and any(word in {'score', 'marks', 'needed', 'require', 'admission'} for word in meaningful_words),
-
-            # Branch + score/marks
-            has_branch and any(word in {'score', 'marks', 'needed', 'require', 'admission'} for word in meaningful_words),
-
-            # Specific phrases
-            any(phrase in text_lower for phrase in [
-                'tell me', 'what is', 'how much', 'how many', 'kya hai', 'kitne marks', 'batao'
-            ]) and (has_campus or has_branch)
+        # Must be a direct question or request
+        question_starters = [
+            'what is the cutoff', 'what was the cutoff', 'what are the cutoffs',
+            'tell me the cutoff', 'show me the cutoff', 'give me the cutoff',
+            'what is cutoff', 'what was cutoff', 'cutoff kya hai', 'cutoff batao',
+            'kitne marks chahiye', 'how many marks', 'required marks', 'minimum marks',
+            'admission cutoff', 'entrance cutoff', 'qualifying marks'
         ]
 
-        return any(patterns)
+        # Must contain specific campus or branch terms
+        specific_terms = [
+            'pilani', 'goa', 'hyderabad', 'hyd', 'bits',
+            'cse', 'computer science', 'ece', 'electronics', 'electrical', 'eee',
+            'mechanical', 'mech', 'chemical', 'chem', 'civil', 'biology', 'bio',
+            'physics', 'phy', 'chemistry', 'economics', 'eco', 'pharmacy', 'pharm',
+            'mathematics', 'math', 'maths', 'manufacturing', 'instrumentation'
+        ]
+
+        # Check if it's a direct cutoff question
+        has_question_starter = any(starter in text_lower for starter in question_starters)
+        has_specific_term = any(term in text_lower for term in specific_terms)
+
+        # Must have both question format AND specific terms
+        return has_question_starter and has_specific_term
 
     def _create_unique_response(self, author, comment_text, meaningful_words):
         """Create a completely unique response every time"""
