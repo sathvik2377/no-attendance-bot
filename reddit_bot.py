@@ -465,7 +465,7 @@ class BITSATBot:
                     score = cutoff_data[campus].get(specific_branch, 'N/A')
                     if score != 'N/A':
                         campus_emoji, _ = campus_info[campus]
-                        response += f"{campus_emoji}\n• {score}/390\n\n"
+                        response += f"{campus_emoji}\n• **{score}/390**\n\n"
 
         # Specific campus query
         elif specific_campus:
@@ -480,21 +480,21 @@ class BITSATBot:
             for branch in engineering:
                 if branch in cutoff_data[specific_campus]:
                     score = cutoff_data[specific_campus][branch]
-                    response += f"• {branch.upper()}: {score}/390\n"
+                    response += f"• {branch.upper()}: **{score}/390**\n"
 
             if any(b in cutoff_data[specific_campus] for b in science):
                 response += "\n**M.Sc Programs:**\n"
                 for branch in science:
                     if branch in cutoff_data[specific_campus]:
                         score = cutoff_data[specific_campus][branch]
-                        response += f"• {branch.upper()}: {score}/390\n"
+                        response += f"• {branch.upper()}: **{score}/390**\n"
 
             if any(b in cutoff_data[specific_campus] for b in pharmacy):
                 response += "\n**Pharmacy:**\n"
                 for branch in pharmacy:
                     if branch in cutoff_data[specific_campus]:
                         score = cutoff_data[specific_campus][branch]
-                        response += f"• {branch.upper()}: {score}/390\n"
+                        response += f"• {branch.upper()}: **{score}/390**\n"
 
         # General query - show ALL branches from ALL campuses
         else:
@@ -520,7 +520,7 @@ class BITSATBot:
                 for branch_key, display_name in engineering_branches:
                     if branch_key in cutoff_data[campus]:
                         score = cutoff_data[campus][branch_key]
-                        response += f"• {display_name}: {score}/390\n"
+                        response += f"• {display_name}: **{score}/390**\n"
 
                 # Science branches
                 science_branches = [
@@ -535,13 +535,13 @@ class BITSATBot:
                     for branch_key, display_name in science_branches:
                         if branch_key in cutoff_data[campus]:
                             score = cutoff_data[campus][branch_key]
-                            response += f"• {display_name}: {score}/390\n"
+                            response += f"• {display_name}: **{score}/390**\n"
 
                 # Pharmacy
                 if 'pharmacy' in cutoff_data[campus]:
                     response += "\n**Pharmacy:**\n"
                     score = cutoff_data[campus]['pharmacy']
-                    response += f"• B.PHARM: {score}/390\n"
+                    response += f"• B.PHARM: **{score}/390**\n"
 
                 response += "\n"
 
@@ -557,6 +557,17 @@ class BITSATBot:
         ]
 
         response += f"\n{random.choice(endings)}\n"
+
+        # Add sassy italic message about max marks
+        sassy_messages = [
+            "*Though max marks are 426, I don't think you're skilled enough to reach there, so 390 is the realistic ceiling for you* 😏",
+            "*While the paper is out of 426, let's be honest - 390 is probably your upper limit anyway* 💀",
+            "*Maximum possible is 426, but considering your preparation level, 390 seems more achievable* 😈",
+            "*The exam goes up to 426 marks, but realistically speaking, 390 is where most mortals peak* 🎭",
+            "*Just so you know, 426 is the theoretical max, but 390 is the practical reality for people like us* 😅"
+        ]
+
+        response += f"\n{random.choice(sassy_messages)}\n"
         response += f"\n📊 More detailed info: https://www.bitsadmission.com/FD/BITSAT_cutoffs.html?06012025"
 
         # Reset random seed
