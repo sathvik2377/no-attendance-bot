@@ -10,6 +10,7 @@ import random
 import time
 import logging
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -103,8 +104,23 @@ class BITSATBot:
             logger.error(f"Authentication failed: {e}")
             return False
     
+    def _is_active_hours(self) -> bool:
+        """Check if bot should be active (9 AM to 1 AM IST)"""
+        now = datetime.now()
+        current_hour = now.hour
+
+        # Active from 9 AM (09:00) to 1 AM (01:00) next day
+        # This means active: 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0
+        if 9 <= current_hour <= 23 or current_hour == 0:
+            return True
+        return False
+
     def should_respond(self, comment) -> bool:
         """Determine if the bot should respond to a comment"""
+        # Check if bot should be active during these hours
+        if not self._is_active_hours():
+            return False
+
         # Don't respond to own comments
         if comment.author and comment.author.name == self.reddit.user.me().name:
             return False
@@ -486,9 +502,22 @@ class BITSATBot:
     def process_comments(self):
         """Process new comments in the subreddit"""
         try:
+            # Check if bot should be active
+            if not self._is_active_hours():
+                current_time = datetime.now().strftime("%H:%M")
+                logger.info(f"Bot inactive during off-hours ({current_time}). Active: 9 AM - 1 AM")
+                time.sleep(300)  # Wait 5 minutes during inactive hours
+                return
+
             # Skip old comments, only monitor new ones
             logger.info("Starting to monitor new comments only...")
             for comment in self.subreddit.stream.comments(skip_existing=True):
+                # Check time again during stream (in case hours change)
+                if not self._is_active_hours():
+                    current_time = datetime.now().strftime("%H:%M")
+                    logger.info(f"Bot going inactive ({current_time}). Active: 9 AM - 1 AM")
+                    break
+
                 if self.should_respond(comment):
                     response = self.generate_response(comment)
 
