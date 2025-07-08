@@ -187,8 +187,8 @@ class BITSATBot:
         text = re.sub(r'\^(.*?)\^', r'\1', text)      # Superscript ^text^
         text = re.sub(r'_(.*?)_', r'\1', text)        # Underline _text_
 
-        # Remove special characters but keep spaces and basic punctuation
-        text = re.sub(r'[^\w\s\?\!\.\,\-]', ' ', text)
+        # Remove special characters and punctuation
+        text = re.sub(r'[^\w\s]', ' ', text)
 
         # Normalize whitespace
         text = re.sub(r'\s+', ' ', text)
