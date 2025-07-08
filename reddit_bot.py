@@ -509,99 +509,121 @@ class BITSATBot:
         # Specific branch query
         if specific_branch:
             if specific_campus:
-                # Specific branch + campus
+                # Specific branch + campus - TABLE FORMAT
                 score = cutoff_data[specific_campus].get(specific_branch, 'N/A')
                 campus_emoji, campus_desc = campus_info[specific_campus]
-                response += f"{campus_emoji}\n"
-                response += f"• {specific_branch.upper()}: **{score}/390**\n\n"
-                response += f"*{campus_desc} - {specific_branch.upper()} cutoff specifically*\n"
+                response += f"{campus_emoji}\n*{campus_desc}*\n\n"
+
+                response += "| Branch | Campus | Cutoff Score |\n"
+                response += "|--------|--------|-------------|\n"
+                response += f"| {specific_branch.upper()} | {specific_campus.title()} | **{score}/390** |\n\n"
             else:
-                # Specific branch, all campuses
+                # Specific branch, all campuses - TABLE FORMAT
                 response += f"**{specific_branch.upper()} CUTOFFS ACROSS CAMPUSES:**\n\n"
+                response += "| Campus | Cutoff Score |\n"
+                response += "|--------|-------------|\n"
+
+                campus_names = {'pilani': '🏛️ Pilani', 'goa': '🏖️ Goa', 'hyderabad': '🏙️ Hyderabad'}
                 for campus in ['pilani', 'goa', 'hyderabad']:
                     score = cutoff_data[campus].get(specific_branch, 'N/A')
                     if score != 'N/A':
-                        campus_emoji, _ = campus_info[campus]
-                        response += f"{campus_emoji}\n• **{score}/390**\n\n"
+                        response += f"| {campus_names[campus]} | **{score}/390** |\n"
+                response += "\n"
 
-        # Specific campus query
+        # Specific campus query - TABLE FORMAT
         elif specific_campus:
             campus_emoji, campus_desc = campus_info[specific_campus]
             response += f"{campus_emoji}\n*{campus_desc}*\n\n"
 
-            # Group branches by type
-            engineering = ['cse', 'ece', 'eee', 'mechanical', 'chemical', 'civil', 'manufacturing', 'mathematics', 'instrumentation']
-            science = ['biology', 'chemistry', 'economics', 'physics']
-            pharmacy = ['pharmacy']
+            response += "| Branch | Cutoff Score |\n"
+            response += "|--------|-------------|\n"
 
-            for branch in engineering:
-                if branch in cutoff_data[specific_campus]:
-                    score = cutoff_data[specific_campus][branch]
-                    response += f"• {branch.upper()}: **{score}/390**\n"
+            # Group branches by type with proper display names
+            engineering_branches = [
+                ('computer science', 'CSE'),
+                ('electronics and communication', 'ECE'),
+                ('electrical and electronics', 'EEE'),
+                ('mechanical', 'Mechanical'),
+                ('chemical', 'Chemical'),
+                ('civil', 'Civil'),
+                ('manufacturing', 'Manufacturing'),
+                ('mathematics and computing', 'Math & Computing'),
+                ('electronics and instrumentation', 'Instrumentation')
+            ]
 
-            if any(b in cutoff_data[specific_campus] for b in science):
-                response += "\n**M.Sc Programs:**\n"
-                for branch in science:
-                    if branch in cutoff_data[specific_campus]:
-                        score = cutoff_data[specific_campus][branch]
-                        response += f"• {branch.upper()}: **{score}/390**\n"
+            science_branches = [
+                ('biological sciences', 'Biology (M.Sc)'),
+                ('chemistry msc', 'Chemistry (M.Sc)'),
+                ('mathematics msc', 'Mathematics (M.Sc)'),
+                ('economics', 'Economics (M.Sc)'),
+                ('physics', 'Physics (M.Sc)')
+            ]
 
-            if any(b in cutoff_data[specific_campus] for b in pharmacy):
-                response += "\n**Pharmacy:**\n"
-                for branch in pharmacy:
-                    if branch in cutoff_data[specific_campus]:
-                        score = cutoff_data[specific_campus][branch]
-                        response += f"• {branch.upper()}: **{score}/390**\n"
+            pharmacy_branches = [
+                ('pharmacy', 'Pharmacy')
+            ]
 
-        # General query - show ALL branches from ALL campuses
+            # Add engineering branches to table
+            for branch_key, display_name in engineering_branches:
+                if branch_key in cutoff_data[specific_campus]:
+                    score = cutoff_data[specific_campus][branch_key]
+                    response += f"| {display_name} | **{score}/390** |\n"
+
+            # Add science branches to table
+            for branch_key, display_name in science_branches:
+                if branch_key in cutoff_data[specific_campus]:
+                    score = cutoff_data[specific_campus][branch_key]
+                    response += f"| {display_name} | **{score}/390** |\n"
+
+            # Add pharmacy to table
+            for branch_key, display_name in pharmacy_branches:
+                if branch_key in cutoff_data[specific_campus]:
+                    score = cutoff_data[specific_campus][branch_key]
+                    response += f"| {display_name} | **{score}/390** |\n"
+
+            response += "\n"
+
+        # General query - show ALL branches from ALL campuses - TABLE FORMAT
         else:
             response += "**🎯 BITSAT 2024 COMPLETE CUTOFFS:**\n\n"
-            for campus in ['pilani', 'goa', 'hyderabad']:
-                campus_emoji, campus_desc = campus_info[campus]
-                response += f"{campus_emoji}\n*{campus_desc}*\n\n"
 
-                # Engineering branches
-                engineering_branches = [
-                    ('computer science', 'CSE'),
-                    ('electronics and communication', 'ECE'),
-                    ('electrical and electronics', 'EEE'),
-                    ('mechanical', 'MECHANICAL'),
-                    ('chemical', 'CHEMICAL'),
-                    ('civil', 'CIVIL'),
-                    ('manufacturing', 'MANUFACTURING'),
-                    ('mathematics and computing', 'MATH & COMPUTING'),
-                    ('electronics and instrumentation', 'INSTRUMENTATION')
-                ]
+            # Create a comprehensive table for all campuses
+            response += "| Branch | 🏛️ Pilani | 🏖️ Goa | 🏙️ Hyderabad |\n"
+            response += "|--------|-----------|--------|-------------|\n"
 
-                response += "**Engineering:**\n"
-                for branch_key, display_name in engineering_branches:
-                    if branch_key in cutoff_data[campus]:
-                        score = cutoff_data[campus][branch_key]
-                        response += f"• {display_name}: **{score}/390**\n"
+            # All branches with proper display names
+            all_branches = [
+                ('computer science', 'CSE'),
+                ('electronics and communication', 'ECE'),
+                ('electrical and electronics', 'EEE'),
+                ('mechanical', 'Mechanical'),
+                ('chemical', 'Chemical'),
+                ('civil', 'Civil'),
+                ('manufacturing', 'Manufacturing'),
+                ('mathematics and computing', 'Math & Computing'),
+                ('electronics and instrumentation', 'Instrumentation'),
+                ('biological sciences', 'Biology (M.Sc)'),
+                ('chemistry msc', 'Chemistry (M.Sc)'),
+                ('mathematics msc', 'Mathematics (M.Sc)'),
+                ('economics', 'Economics (M.Sc)'),
+                ('physics', 'Physics (M.Sc)'),
+                ('pharmacy', 'Pharmacy')
+            ]
 
-                # Science branches
-                science_branches = [
-                    ('biological sciences', 'BIOLOGY'),
-                    ('chemistry msc', 'CHEMISTRY'),
-                    ('mathematics msc', 'MATHEMATICS'),
-                    ('economics', 'ECONOMICS'),
-                    ('physics', 'PHYSICS')
-                ]
+            for branch_key, display_name in all_branches:
+                pilani_score = cutoff_data['pilani'].get(branch_key, '-')
+                goa_score = cutoff_data['goa'].get(branch_key, '-')
+                hyd_score = cutoff_data['hyderabad'].get(branch_key, '-')
 
-                if any(branch_key in cutoff_data[campus] for branch_key, _ in science_branches):
-                    response += "\n**M.Sc Programs:**\n"
-                    for branch_key, display_name in science_branches:
-                        if branch_key in cutoff_data[campus]:
-                            score = cutoff_data[campus][branch_key]
-                            response += f"• {display_name}: **{score}/390**\n"
+                # Only show row if at least one campus has this branch
+                if pilani_score != '-' or goa_score != '-' or hyd_score != '-':
+                    pilani_display = f"**{pilani_score}**" if pilani_score != '-' else '-'
+                    goa_display = f"**{goa_score}**" if goa_score != '-' else '-'
+                    hyd_display = f"**{hyd_score}**" if hyd_score != '-' else '-'
 
-                # Pharmacy
-                if 'pharmacy' in cutoff_data[campus]:
-                    response += "\n**Pharmacy:**\n"
-                    score = cutoff_data[campus]['pharmacy']
-                    response += f"• B.PHARM: **{score}/390**\n"
+                    response += f"| {display_name} | {pilani_display} | {goa_display} | {hyd_display} |\n"
 
-                response += "\n"
+            response += "\n*All scores are out of 390*\n\n"
 
         # Dark and funny motivational endings
         endings = [
