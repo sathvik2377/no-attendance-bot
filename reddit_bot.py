@@ -219,13 +219,27 @@ class BITSATBot:
             'pilani', 'goa', 'hyderabad', 'hyd', 'bits', 'campus', 'campuses'
         }
 
-        # Branch terms
+        # Branch terms (including new abbreviations and case variations)
         branch_terms = {
             'cse', 'computer', 'science', 'cs', 'ece', 'electronics', 'communication',
             'eee', 'electrical', 'mechanical', 'mech', 'chemical', 'chem', 'civil',
             'manufacturing', 'manuf', 'mathematics', 'math', 'maths', 'computing',
             'biology', 'bio', 'biological', 'physics', 'phy', 'chemistry', 'economics',
-            'eco', 'pharmacy', 'pharm', 'instrumentation', 'instru'
+            'eco', 'pharmacy', 'pharm', 'instrumentation', 'instru',
+            # New abbreviations
+            'mnc', 'eni',
+            # Case variations for all terms
+            'CSE', 'COMPUTER', 'SCIENCE', 'CS', 'ECE', 'ELECTRONICS', 'COMMUNICATION',
+            'EEE', 'ELECTRICAL', 'MECHANICAL', 'MECH', 'CHEMICAL', 'CHEM', 'CIVIL',
+            'MANUFACTURING', 'MANUF', 'MATHEMATICS', 'MATH', 'MATHS', 'COMPUTING',
+            'BIOLOGY', 'BIO', 'BIOLOGICAL', 'PHYSICS', 'PHY', 'CHEMISTRY', 'ECONOMICS',
+            'ECO', 'PHARMACY', 'PHARM', 'INSTRUMENTATION', 'INSTRU', 'MNC', 'ENI',
+            # Title case variations
+            'Cse', 'Computer', 'Science', 'Cs', 'Ece', 'Electronics', 'Communication',
+            'Eee', 'Electrical', 'Mechanical', 'Mech', 'Chemical', 'Chem', 'Civil',
+            'Manufacturing', 'Manuf', 'Mathematics', 'Math', 'Maths', 'Computing',
+            'Biology', 'Bio', 'Biological', 'Physics', 'Phy', 'Chemistry', 'Economics',
+            'Eco', 'Pharmacy', 'Pharm', 'Instrumentation', 'Instru', 'Mnc', 'Eni'
         }
 
         # Question indicators (more flexible)
@@ -329,6 +343,22 @@ class BITSATBot:
         seed_hash = int(hashlib.md5(unique_seed.encode()).hexdigest()[:8], 16)
         random.seed(seed_hash)
 
+        # Helper function to add case variations
+        def add_case_variations(branch_dict):
+            """Add all case variations for branch names"""
+            new_dict = {}
+            for key, value in branch_dict.items():
+                # Add original
+                new_dict[key] = value
+                # Add uppercase
+                new_dict[key.upper()] = value
+                # Add title case
+                new_dict[key.title()] = value
+                # Add first letter uppercase
+                if len(key) > 0:
+                    new_dict[key[0].upper() + key[1:]] = value
+            return new_dict
+
         # Complete cutoff data
         cutoff_data = {
             'pilani': {
@@ -339,14 +369,14 @@ class BITSATBot:
                 'chemical': 247, 'chemical engineering': 247, 'chem': 247,
                 'civil': 238, 'civil engineering': 238,
                 'manufacturing': 243, 'manufacturing engineering': 243, 'manuf': 243,
-                'mathematics and computing': 318, 'math and computing': 318, 'mathematics computing': 318,
+                'mathematics and computing': 318, 'math and computing': 318, 'mathematics computing': 318, 'mnc': 318, 'mnc': 318,
                 'pharmacy': 165, 'pharm': 165, 'b.pharm': 165,
                 'biological sciences': 236, 'biology': 236, 'bio': 236, 'biological': 236,
                 'chemistry msc': 241, 'msc chemistry': 241,
                 'mathematics msc': 256, 'msc mathematics': 256, 'msc math': 256, 'msc maths': 256,
                 'economics': 271, 'eco': 271, 'msc economics': 271,
                 'physics': 254, 'phy': 254, 'msc physics': 254,
-                'electronics and instrumentation': 282, 'instrumentation': 282, 'instru': 282
+                'electronics and instrumentation': 282, 'instrumentation': 282, 'instru': 282, 'eni': 282
             },
             'goa': {
                 'computer science': 301, 'cse': 301, 'cs': 301, 'computer': 301,
@@ -354,13 +384,13 @@ class BITSATBot:
                 'electrical and electronics': 278, 'eee': 278, 'electrical': 278,
                 'mechanical': 254, 'mech': 254, 'mechanical engineering': 254,
                 'chemical': 239, 'chemical engineering': 239, 'chem': 239,
-                'mathematics and computing': 295, 'math and computing': 295, 'mathematics computing': 295,
+                'mathematics and computing': 295, 'math and computing': 295, 'mathematics computing': 295, 'mnc': 295,
                 'biological sciences': 234, 'biology': 234, 'bio': 234, 'biological': 234,
                 'chemistry msc': 236, 'msc chemistry': 236,
                 'mathematics msc': 249, 'msc mathematics': 249, 'msc math': 249, 'msc maths': 249,
                 'economics': 263, 'eco': 263, 'msc economics': 263,
                 'physics': 243, 'phy': 243, 'msc physics': 243,
-                'electronics and instrumentation': 270, 'instrumentation': 270, 'instru': 270
+                'electronics and instrumentation': 270, 'instrumentation': 270, 'instru': 270, 'eni': 270
             },
             'hyderabad': {
                 'computer science': 298, 'cse': 298, 'cs': 298, 'computer': 298,
@@ -369,16 +399,20 @@ class BITSATBot:
                 'mechanical': 251, 'mech': 251, 'mechanical engineering': 251,
                 'chemical': 238, 'chemical engineering': 238, 'chem': 238,
                 'civil': 235, 'civil engineering': 235,
-                'mathematics and computing': 293, 'math and computing': 293, 'mathematics computing': 293,
+                'mathematics and computing': 293, 'math and computing': 293, 'mathematics computing': 293, 'mnc': 293,
                 'pharmacy': 161, 'pharm': 161, 'b.pharm': 161,
                 'biological sciences': 234, 'biology': 234, 'bio': 234, 'biological': 234,
                 'chemistry msc': 235, 'msc chemistry': 235,
                 'mathematics msc': 247, 'msc mathematics': 247, 'msc math': 247, 'msc maths': 247,
                 'economics': 261, 'eco': 261, 'msc economics': 261,
                 'physics': 245, 'phy': 245, 'msc physics': 245,
-                'electronics and instrumentation': 270, 'instrumentation': 270, 'instru': 270
+                'electronics and instrumentation': 270, 'instrumentation': 270, 'instru': 270, 'eni': 270
             }
         }
+
+        # Apply case variations to all campuses
+        for campus in cutoff_data:
+            cutoff_data[campus] = add_case_variations(cutoff_data[campus])
 
         # Parse the query intelligently using cleaned text
         query = clean_query.lower()
