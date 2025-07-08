@@ -1,1 +1,1 @@
-worker: python reddit_bot.py
+worker: python bot_scheduler.py

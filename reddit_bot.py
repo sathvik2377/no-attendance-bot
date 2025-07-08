@@ -527,20 +527,13 @@ class BITSATBot:
     def process_comments(self):
         """Process new comments in the subreddit"""
         try:
-            # Check if bot should be active
-            if not self._is_active_hours():
-                current_time = datetime.now().strftime("%H:%M")
-                logger.info(f"Bot inactive during off-hours ({current_time}). Active: 9 AM - 1 AM")
-                time.sleep(300)  # Wait 5 minutes during inactive hours
-                return
-
             # Skip old comments, only monitor new ones
             logger.info("Starting to monitor new comments only...")
             for comment in self.subreddit.stream.comments(skip_existing=True):
-                # Check time again during stream (in case hours change)
+                # Check time during stream (bot will exit if inactive)
                 if not self._is_active_hours():
                     current_time = datetime.now().strftime("%H:%M")
-                    logger.info(f"Bot going inactive ({current_time}). Active: 9 AM - 1 AM")
+                    logger.info(f"Reached inactive hours ({current_time}). Exiting stream.")
                     break
 
                 if self.should_respond(comment):
@@ -561,16 +554,31 @@ class BITSATBot:
             logger.error(f"Error processing comments: {e}")
     
     def run(self):
-        """Main bot loop"""
+        """Main bot loop with smart Railway hour management"""
+        # Check if bot should be active before even starting
+        if not self._is_active_hours():
+            current_time = datetime.now().strftime("%H:%M")
+            logger.info(f"Bot starting during inactive hours ({current_time}). Exiting to save Railway hours.")
+            logger.info("Bot will restart automatically during active hours (9 AM - 1 AM)")
+            return
+
         if not self.authenticate():
             logger.error("Failed to authenticate. Please check your credentials.")
             return
-        
+
         logger.info("BITSAT Bot started successfully!")
         logger.info(f"Monitoring r/{self.subreddit.display_name}")
-        
+        logger.info("Active hours: 9 AM - 1 AM (saves Railway hours during night)")
+
         while True:
             try:
+                # Check if we should stop to save Railway hours
+                if not self._is_active_hours():
+                    current_time = datetime.now().strftime("%H:%M")
+                    logger.info(f"Reached inactive hours ({current_time}). Stopping bot to save Railway hours.")
+                    logger.info("Bot will restart automatically at 9 AM. Good night! 😴")
+                    break
+
                 self.process_comments()
             except KeyboardInterrupt:
                 logger.info("Bot stopped by user")
