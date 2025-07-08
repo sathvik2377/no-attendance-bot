@@ -196,35 +196,75 @@ class BITSATBot:
         return text.strip()
 
     def _is_specific_cutoff_query(self, comment_text):
-        """Only respond to VERY SPECIFIC cutoff queries"""
+        """Intelligently detect cutoff queries by analyzing word combinations"""
         # Clean formatting first
         clean_text = self._clean_text_formatting(comment_text)
         text_lower = clean_text.lower().strip()
 
-        # Must be a direct question or request
-        question_starters = [
-            'what is the cutoff', 'what was the cutoff', 'what are the cutoffs',
-            'tell me the cutoff', 'show me the cutoff', 'give me the cutoff',
-            'what is cutoff', 'what was cutoff', 'cutoff kya hai', 'cutoff batao',
-            'kitne marks chahiye', 'how many marks', 'required marks', 'minimum marks',
-            'admission cutoff', 'entrance cutoff', 'qualifying marks'
+        # Break into words for analysis
+        words = text_lower.split()
+
+        # Remove common stop words
+        stop_words = {'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'with', 'to', 'for', 'of', 'as', 'by', 'bruh', 'bro', 'yaar', 'man'}
+        meaningful_words = [word for word in words if word not in stop_words and len(word) > 1]
+
+        # Cutoff-related terms
+        cutoff_terms = {
+            'cutoff', 'cutoffs', 'cut-off', 'cut-offs', 'minimum', 'required', 'needed',
+            'admission', 'qualifying', 'entrance', 'score', 'scores', 'marks', 'points'
+        }
+
+        # Campus terms
+        campus_terms = {
+            'pilani', 'goa', 'hyderabad', 'hyd', 'bits', 'campus', 'campuses'
+        }
+
+        # Branch terms
+        branch_terms = {
+            'cse', 'computer', 'science', 'cs', 'ece', 'electronics', 'communication',
+            'eee', 'electrical', 'mechanical', 'mech', 'chemical', 'chem', 'civil',
+            'manufacturing', 'manuf', 'mathematics', 'math', 'maths', 'computing',
+            'biology', 'bio', 'biological', 'physics', 'phy', 'chemistry', 'economics',
+            'eco', 'pharmacy', 'pharm', 'instrumentation', 'instru'
+        }
+
+        # Question indicators (more flexible)
+        question_words = {
+            'what', 'how', 'tell', 'show', 'give', 'share', 'know', 'kya', 'kitne',
+            'batao', 'bata', 'chahiye', 'need', 'want', 'looking', 'find'
+        }
+
+        # Check for word combinations
+        has_cutoff_term = any(word in cutoff_terms for word in meaningful_words)
+        has_campus = any(word in campus_terms for word in meaningful_words)
+        has_branch = any(word in branch_terms for word in meaningful_words)
+        has_question = any(word in question_words for word in meaningful_words)
+
+        # Advanced pattern matching for natural language
+        patterns = [
+            # Direct cutoff mentions with campus/branch
+            has_cutoff_term and (has_campus or has_branch),
+
+            # Campus + Branch combination (like "Goa ECE cutoff")
+            has_campus and has_branch and len(meaningful_words) <= 5,
+
+            # Question + campus/branch + cutoff context (but not general questions)
+            has_question and (has_campus or has_branch) and (has_cutoff_term or any(word in {'score', 'marks', 'needed', 'require', 'admission', 'minimum'} for word in meaningful_words)),
+
+            # Campus + Branch + any cutoff-related context (even without explicit "cutoff" word)
+            has_campus and has_branch and any(word in {'score', 'marks', 'needed', 'require', 'admission', 'minimum'} for word in meaningful_words),
+
+            # Short queries with campus and branch (like "Goa ECE cutoff bruh")
+            has_campus and has_branch and len(words) <= 6,
+
+            # Specific phrases that indicate cutoff queries
+            any(phrase in text_lower for phrase in [
+                'tell me', 'what is', 'how much', 'how many', 'kya hai', 'kitne marks', 'batao',
+                'cutoff for', 'marks for', 'score for', 'needed for'
+            ]) and (has_campus or has_branch) and (has_cutoff_term or any(word in {'score', 'marks', 'needed', 'require', 'admission', 'minimum'} for word in meaningful_words))
         ]
 
-        # Must contain specific campus or branch terms
-        specific_terms = [
-            'pilani', 'goa', 'hyderabad', 'hyd', 'bits',
-            'cse', 'computer science', 'ece', 'electronics', 'electrical', 'eee',
-            'mechanical', 'mech', 'chemical', 'chem', 'civil', 'biology', 'bio',
-            'physics', 'phy', 'chemistry', 'economics', 'eco', 'pharmacy', 'pharm',
-            'mathematics', 'math', 'maths', 'manufacturing', 'instrumentation'
-        ]
-
-        # Check if it's a direct cutoff question
-        has_question_starter = any(starter in text_lower for starter in question_starters)
-        has_specific_term = any(term in text_lower for term in specific_terms)
-
-        # Must have both question format AND specific terms
-        return has_question_starter and has_specific_term
+        return any(patterns)
 
     def _create_unique_response(self, author, comment_text, meaningful_words):
         """Create a completely unique response every time"""
