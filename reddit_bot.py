@@ -145,8 +145,11 @@ class BITSATBot:
 
         comment_text = comment.body.strip()
 
+        # Clean formatting to detect commands properly
+        clean_text = self._clean_text_formatting(comment_text)
+
         # Always respond to comments starting with "!" (these are cutoff commands)
-        if comment_text.startswith('!'):
+        if clean_text.startswith('!') or comment_text.startswith('!'):
             return True
 
         # Only respond to VERY SPECIFIC cutoff queries (not general comments)
@@ -171,9 +174,32 @@ class BITSATBot:
         # This shouldn't happen with current logic, but just in case
         return self._create_unique_response(author_name, comment_text, [])
 
+    def _clean_text_formatting(self, text):
+        """Remove Reddit formatting and normalize text"""
+        import re
+
+        # Remove Reddit markdown formatting
+        text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)  # Bold **text**
+        text = re.sub(r'\*(.*?)\*', r'\1', text)      # Italic *text*
+        text = re.sub(r'`(.*?)`', r'\1', text)        # Code `text`
+        text = re.sub(r'```(.*?)```', r'\1', text, flags=re.DOTALL)  # Code blocks
+        text = re.sub(r'~~(.*?)~~', r'\1', text)      # Strikethrough ~~text~~
+        text = re.sub(r'\^(.*?)\^', r'\1', text)      # Superscript ^text^
+        text = re.sub(r'_(.*?)_', r'\1', text)        # Underline _text_
+
+        # Remove special characters but keep spaces and basic punctuation
+        text = re.sub(r'[^\w\s\?\!\.\,\-]', ' ', text)
+
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text)
+
+        return text.strip()
+
     def _is_specific_cutoff_query(self, comment_text):
         """Only respond to VERY SPECIFIC cutoff queries"""
-        text_lower = comment_text.lower().strip()
+        # Clean formatting first
+        clean_text = self._clean_text_formatting(comment_text)
+        text_lower = clean_text.lower().strip()
 
         # Must be a direct question or request
         question_starters = [
@@ -255,8 +281,11 @@ class BITSATBot:
         import hashlib
         import time
 
+        # Clean formatting from the query text
+        clean_query = self._clean_text_formatting(comment_text)
+
         # Create unique seed for this response
-        unique_seed = f"{author}{comment_text}{time.time()}"
+        unique_seed = f"{author}{clean_query}{time.time()}"
         seed_hash = int(hashlib.md5(unique_seed.encode()).hexdigest()[:8], 16)
         random.seed(seed_hash)
 
@@ -308,8 +337,8 @@ class BITSATBot:
             }
         }
 
-        # Parse the query intelligently
-        query = comment_text.lower()
+        # Parse the query intelligently using cleaned text
+        query = clean_query.lower()
         specific_branch = None
         specific_campus = None
 
