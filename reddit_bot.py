@@ -267,25 +267,27 @@ class BITSATBot:
                 # All other ! commands are cutoff related
                 return self._generate_cutoff_response(author_name, comment_text)
 
-        # Check if this is an admission query
-        if self._is_admission_query(comment_text):
-            return self._generate_admission_response(author_name, comment_text)
+        # Check queries in priority order (most specific first)
 
-        # Check if this is a branch comparison query
-        if self._is_branch_comparison_query(comment_text):
-            return self._generate_branch_comparison_response(author_name, comment_text)
-
-        # Check if this is a trend query
+        # 1. Check if this is a trend query (highest priority - most specific)
         if self._is_trend_query(comment_text):
             return self._generate_trend_response(author_name, comment_text)
 
-        # Check if this is a suggestion query
-        if self._is_suggestion_query(comment_text):
-            return self._generate_suggestion_response(author_name, comment_text)
-
-        # Check if this is a chance query
+        # 2. Check if this is a chance query (specific score + branch)
         if self._is_chance_query(comment_text):
             return self._generate_chance_response(author_name, comment_text)
+
+        # 3. Check if this is an admission query
+        if self._is_admission_query(comment_text):
+            return self._generate_admission_response(author_name, comment_text)
+
+        # 4. Check if this is a branch comparison query
+        if self._is_branch_comparison_query(comment_text):
+            return self._generate_branch_comparison_response(author_name, comment_text)
+
+        # 5. Check if this is a suggestion query
+        if self._is_suggestion_query(comment_text):
+            return self._generate_suggestion_response(author_name, comment_text)
 
         # Check if this is a specific cutoff query in natural language
         if self._is_specific_cutoff_query(comment_text):
@@ -540,15 +542,24 @@ class BITSATBot:
         clean_text = self._clean_text_formatting(comment_text)
         text_lower = clean_text.lower().strip()
 
-        # Chance patterns
+        # Strong chance patterns
         chance_patterns = [
             'chance', 'chances', 'probability', 'likely', 'possibility',
             'any chance', 'what are my chances', 'chances of getting',
             'can i get', 'will i get', 'possible to get'
         ]
 
+        # Exclude comparison patterns to avoid conflicts
+        comparison_exclusions = [
+            'vs', 'versus', 'compare', 'comparison', 'difference between',
+            'better', 'which is better', 'choose between'
+        ]
+
         # Must contain chance pattern
         has_chance = any(pattern in text_lower for pattern in chance_patterns)
+
+        # Must NOT contain comparison patterns
+        has_comparison = any(pattern in text_lower for pattern in comparison_exclusions)
 
         # Must mention score/marks and branch
         import re
@@ -563,7 +574,8 @@ class BITSATBot:
 
         has_branch = any(term in text_lower for term in branch_terms)
 
-        return has_chance and has_score and has_branch
+        # Only return true if it's clearly a chance query and NOT a comparison
+        return has_chance and has_score and has_branch and not has_comparison
 
     def _create_unique_response(self, author, comment_text, meaningful_words):
         """Create a completely unique response every time"""
