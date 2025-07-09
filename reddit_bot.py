@@ -1591,8 +1591,8 @@ class BITSATBot:
 
                 # First show the last 3 years cutoffs clearly
                 response += "**RECENT CUTOFFS (Last 3 Years)**\n\n"
-                response += "| Year | Cutoff Score | Status |\n"
-                response += "|------|-------------|--------|\n"
+                response += "Year | Cutoff Score | Status\n"
+                response += "---|---|---\n"
 
                 years = sorted(campus_data.keys(), reverse=True)
                 recent_years = years[:3]  # Last 3 years
@@ -1601,12 +1601,12 @@ class BITSATBot:
                     cutoff = campus_data[year]
                     if cutoff is not None:
                         status = "Latest" if year == years[0] else "Previous"
-                        response += f"| {year} | **{cutoff}** | {status} |\n"
+                        response += f"{year} | **{cutoff}** | {status}\n"
 
                 # Then show detailed trend analysis
                 response += f"\n**DETAILED TREND ANALYSIS**\n\n"
-                response += "| Year | Cutoff | Year-on-Year Change | Trend Pattern |\n"
-                response += "|------|--------|-------------------|---------------|\n"
+                response += "Year | Cutoff | Year-on-Year Change | Trend Pattern\n"
+                response += "---|---|---|---\n"
 
                 for i, year in enumerate(years):
                     cutoff = campus_data[year]
@@ -1634,7 +1634,7 @@ class BITSATBot:
                             change_str = "-"
                             trend_desc = "Baseline year"
 
-                        response += f"| {year} | {cutoff} | {change_str} | {trend_desc} |\n"
+                        response += f"{year} | {cutoff} | {change_str} | {trend_desc}\n"
 
                 # Calculate trends and predictions (using available data)
                 if '2024' in campus_data and '2022' in campus_data and campus_data['2022'] is not None:
@@ -1751,14 +1751,14 @@ class BITSATBot:
             elif user_score >= 300:
                 response += "**GREAT SCORE - MULTIPLE EXCELLENT OPTIONS**\n\n"
                 response += "**ADMISSION PROBABILITY ANALYSIS**\n\n"
-                response += "| Branch | Campus | Cutoff 2024 | Your Score | Admission Chance | Risk Level |\n"
-                response += "|--------|--------|-------------|------------|------------------|------------|\n"
-                response += f"| CSE | Goa | 301 | {user_score} | 95% | Very Low |\n"
-                response += f"| CSE | Hyderabad | 298 | {user_score} | 98% | Very Low |\n"
-                response += f"| CSE | Pilani | 327 | {user_score} | 60% | Moderate |\n"
-                response += f"| ECE | Pilani | 314 | {user_score} | 100% | None |\n"
-                response += f"| ECE | Goa/Hyd | 287/284 | {user_score} | 100% | None |\n"
-                response += f"| MnC | Any | 318/295/293 | {user_score} | 100% | None |\n\n"
+                response += "Branch | Campus | Cutoff 2024 | Your Score | Admission Chance | Risk Level\n"
+                response += "---|---|---|---|---|---\n"
+                response += f"CSE | Goa | 301 | {user_score} | 95% | Very Low\n"
+                response += f"CSE | Hyderabad | 298 | {user_score} | 98% | Very Low\n"
+                response += f"CSE | Pilani | 327 | {user_score} | 60% | Moderate\n"
+                response += f"ECE | Pilani | 314 | {user_score} | 100% | None\n"
+                response += f"ECE | Goa/Hyd | 287/284 | {user_score} | 100% | None\n"
+                response += f"MnC | Any | 318/295/293 | {user_score} | 100% | None\n\n"
 
                 response += "**PLACEMENT & CAREER PROSPECTS**\n\n"
                 response += "| Branch | Avg Package | Median | Highest | Top Companies | Career Growth |\n"
