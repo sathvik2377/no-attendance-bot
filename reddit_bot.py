@@ -420,7 +420,7 @@ class BITSATBot:
                 'chemical': 247, 'chemical engineering': 247, 'chem': 247,
                 'civil': 238, 'civil engineering': 238,
                 'manufacturing': 243, 'manufacturing engineering': 243, 'manuf': 243,
-                'mathematics and computing': 318, 'math and computing': 318, 'mathematics computing': 318, 'mnc': 318, 'mnc': 318,
+                'mathematics and computing': 318, 'math and computing': 318, 'mathematics computing': 318, 'mnc': 318, 'maths': 318, 'mathematics': 318, 'mnc': 318,
                 'pharmacy': 165, 'pharm': 165, 'b.pharm': 165,
                 'biological sciences': 236, 'biology': 236, 'bio': 236, 'biological': 236,
                 'chemistry msc': 241, 'msc chemistry': 241,
@@ -435,7 +435,7 @@ class BITSATBot:
                 'electrical and electronics': 278, 'eee': 278, 'electrical': 278,
                 'mechanical': 254, 'mech': 254, 'mechanical engineering': 254,
                 'chemical': 239, 'chemical engineering': 239, 'chem': 239,
-                'mathematics and computing': 295, 'math and computing': 295, 'mathematics computing': 295, 'mnc': 295,
+                'mathematics and computing': 295, 'math and computing': 295, 'mathematics computing': 295, 'mnc': 295, 'maths': 295, 'mathematics': 295,
                 'biological sciences': 234, 'biology': 234, 'bio': 234, 'biological': 234,
                 'chemistry msc': 236, 'msc chemistry': 236,
                 'mathematics msc': 249, 'msc mathematics': 249, 'msc math': 249, 'msc maths': 249,
@@ -450,7 +450,7 @@ class BITSATBot:
                 'mechanical': 251, 'mech': 251, 'mechanical engineering': 251,
                 'chemical': 238, 'chemical engineering': 238, 'chem': 238,
                 'civil': 235, 'civil engineering': 235,
-                'mathematics and computing': 293, 'math and computing': 293, 'mathematics computing': 293, 'mnc': 293,
+                'mathematics and computing': 293, 'math and computing': 293, 'mathematics computing': 293, 'mnc': 293, 'maths': 293, 'mathematics': 293,
                 'pharmacy': 161, 'pharm': 161, 'b.pharm': 161,
                 'biological sciences': 234, 'biology': 234, 'bio': 234, 'biological': 234,
                 'chemistry msc': 235, 'msc chemistry': 235,
@@ -477,25 +477,15 @@ class BITSATBot:
                 if branch in query:
                     branch_matches.append(branch)
 
-        logger.info(f"QUERY ANALYSIS: '{clean_query}'")
-        logger.info(f"Words in query: {query.split()}")
-        logger.info(f"Initial branch matches: {branch_matches}")
-
         # Prioritize M.Sc programs when "msc" or "m.sc" is mentioned
         if 'msc' in query or 'm.sc' in query or 'm sc' in query:
-            logger.info("MSC CONTEXT DETECTED - Prioritizing M.Sc programs")
-
             # First check for direct MSc matches
             msc_matches = [branch for branch in branch_matches if 'msc' in branch]
-            logger.info(f"Direct MSc matches: {msc_matches}")
 
             if msc_matches:
                 specific_branch = max(msc_matches, key=len)
-                logger.info(f"Selected MSc branch: {specific_branch}")
             else:
                 # If no direct MSc match, try to infer from subject + msc context
-                logger.info("No direct MSc match, trying subject inference...")
-
                 # Subject mapping for MSc programs
                 subject_mappings = {
                     'mathematics': ['mathematics msc', 'msc mathematics'],
@@ -511,67 +501,35 @@ class BITSATBot:
 
                 for subject, possible_branches in subject_mappings.items():
                     if subject in query:
-                        logger.info(f"Found subject '{subject}' in query")
-                        logger.info(f"Trying branches: {possible_branches}")
-
                         for branch in possible_branches:
                             if any(branch in cutoff_data[campus] for campus in cutoff_data):
                                 specific_branch = branch
-                                logger.info(f"Matched MSc branch: {branch}")
                                 break
 
                         if specific_branch:
                             break
-
-                if not specific_branch:
-                    logger.warning("No MSc branch could be inferred from query")
         else:
-            logger.info("NON-MSC CONTEXT - Using standard branch detection")
             # Get the longest match (most specific) for non-MSc queries
             if branch_matches:
                 specific_branch = max(branch_matches, key=len)
-                logger.info(f"Selected branch: {specific_branch}")
 
-        logger.info(f"FINAL BRANCH SELECTION: {specific_branch}")
-
-        # Enhanced campus detection with variations and logging
+        # Enhanced campus detection with variations
         campus_patterns = {
             'pilani': ['pilani', 'pilani campus', 'bits pilani'],
             'goa': ['goa', 'goa campus', 'bits goa', 'k k birla goa'],
             'hyderabad': ['hyderabad', 'hyd', 'hyderabad campus', 'bits hyderabad', 'bits hyd']
         }
 
-        logger.info("CAMPUS DETECTION:")
         for campus, patterns in campus_patterns.items():
             matched_patterns = [pattern for pattern in patterns if pattern in query]
             if matched_patterns:
                 specific_campus = campus
-                logger.info(f"Campus detected: {campus.upper()} (matched: {matched_patterns})")
                 break
-            else:
-                logger.info(f"{campus.upper()}: No match")
 
-        logger.info(f"FINAL CAMPUS SELECTION: {specific_campus}")
-
-        # Summary of query understanding
-        logger.info("=" * 60)
-        logger.info("QUERY UNDERSTANDING SUMMARY:")
-        logger.info(f"User: {author}")
-        logger.info(f"Query: '{clean_query}'")
-        logger.info(f"Detected Branch: {specific_branch or 'ALL BRANCHES'}")
-        logger.info(f"Detected Campus: {specific_campus or 'ALL CAMPUSES'}")
-
-        if specific_branch and specific_campus:
-            query_type = "SPECIFIC BRANCH + CAMPUS"
-        elif specific_branch:
-            query_type = "SPECIFIC BRANCH (ALL CAMPUSES)"
-        elif specific_campus:
-            query_type = "SPECIFIC CAMPUS (ALL BRANCHES)"
-        else:
-            query_type = "GENERAL QUERY (ALL DATA)"
-
-        logger.info(f"Response Type: {query_type}")
-        logger.info("=" * 60)
+        # Log query understanding in one line
+        branch_str = specific_branch or 'ALL'
+        campus_str = specific_campus or 'ALL'
+        logger.info(f"Query: '{clean_query}' -> Branch: {branch_str}, Campus: {campus_str}")
 
         return self._format_cutoff_response(author, cutoff_data, specific_branch, specific_campus)
 
@@ -670,7 +628,7 @@ class BITSATBot:
                 'chemical': 247, 'chemical engineering': 247, 'chem': 247,
                 'civil': 238, 'civil engineering': 238,
                 'manufacturing': 243, 'manufacturing engineering': 243, 'manuf': 243,
-                'mathematics and computing': 318, 'math and computing': 318, 'mathematics computing': 318, 'mnc': 318,
+                'mathematics and computing': 318, 'math and computing': 318, 'mathematics computing': 318, 'mnc': 318, 'maths': 318, 'mathematics': 318,
                 'pharmacy': 165, 'pharm': 165, 'b.pharm': 165,
                 'biological sciences': 236, 'biology': 236, 'bio': 236, 'biological': 236,
                 'chemistry msc': 241, 'msc chemistry': 241,
@@ -685,7 +643,7 @@ class BITSATBot:
                 'electrical and electronics': 278, 'eee': 278, 'electrical': 278,
                 'mechanical': 254, 'mech': 254, 'mechanical engineering': 254,
                 'chemical': 239, 'chemical engineering': 239, 'chem': 239,
-                'mathematics and computing': 295, 'math and computing': 295, 'mathematics computing': 295, 'mnc': 295,
+                'mathematics and computing': 295, 'math and computing': 295, 'mathematics computing': 295, 'mnc': 295, 'maths': 295, 'mathematics': 295,
                 'biological sciences': 234, 'biology': 234, 'bio': 234, 'biological': 234,
                 'chemistry msc': 236, 'msc chemistry': 236,
                 'mathematics msc': 249, 'msc mathematics': 249, 'msc math': 249, 'msc maths': 249,
@@ -700,7 +658,7 @@ class BITSATBot:
                 'mechanical': 251, 'mech': 251, 'mechanical engineering': 251,
                 'chemical': 238, 'chemical engineering': 238, 'chem': 238,
                 'civil': 235, 'civil engineering': 235,
-                'mathematics and computing': 293, 'math and computing': 293, 'mathematics computing': 293, 'mnc': 293,
+                'mathematics and computing': 293, 'math and computing': 293, 'mathematics computing': 293, 'mnc': 293, 'maths': 293, 'mathematics': 293,
                 'pharmacy': 161, 'pharm': 161, 'b.pharm': 161,
                 'biological sciences': 234, 'biology': 234, 'bio': 234, 'biological': 234,
                 'chemistry msc': 235, 'msc chemistry': 235,
