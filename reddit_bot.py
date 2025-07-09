@@ -224,44 +224,99 @@ class BITSATBot:
         # Clean formatting to detect commands properly
         clean_text = self._clean_text_formatting(comment_text)
 
-        # Always respond to comments starting with "!" (these are cutoff commands)
+        # ONLY respond to comments starting with "!" (explicit commands)
         if clean_text.startswith('!') or comment_text.startswith('!'):
             return True
 
-        # Only respond to VERY SPECIFIC cutoff queries (not general comments)
-        if self._is_specific_cutoff_query(comment.body):
+        # Check if bot is explicitly mentioned by username
+        bot_username = self.reddit.user.me().name.lower()
+        if bot_username in comment_text.lower():
             return True
 
-        # Check queries in priority order (most specific first)
+        # Check if comment is a direct reply to the bot
+        if hasattr(comment, 'parent') and comment.parent():
+            try:
+                parent = comment.parent()
+                if hasattr(parent, 'author') and parent.author and parent.author.name == self.reddit.user.me().name:
+                    return True
+            except:
+                pass
 
-        # 1. Check for trend queries first (most specific)
-        if self._is_trend_query(comment.body):
-            return True
-
-        # 2. Check for chance queries
-        if self._is_chance_query(comment.body):
-            return True
-
-        # 3. Check for admission queries (can I get, will I qualify, etc.)
-        if self._is_admission_query(comment.body):
-            return True
-
-        # 4. Check for branch comparison queries
-        if self._is_branch_comparison_query(comment.body):
-            return True
-
-        # 5. Check for suggestion queries
-        if self._is_suggestion_query(comment.body):
+        # VERY restrictive natural language detection - only respond to DIRECT QUESTIONS
+        if self._is_direct_question_to_bot(comment.body):
             return True
 
         return False
-    
+
+    def _is_direct_question_to_bot(self, comment_text):
+        """Very restrictive detection - only respond to DIRECT questions asking for cutoffs/help"""
+        clean_text = self._clean_text_formatting(comment_text)
+        text_lower = clean_text.lower().strip()
+
+        # Must be a question (has question words or question mark)
+        question_indicators = [
+            'what', 'how', 'can', 'will', 'should', 'which', 'where', 'when',
+            'tell me', 'help me', 'show me', 'give me', 'need to know',
+            'anyone know', 'does anyone', 'can someone', 'help with',
+            'kya', 'kaise', 'kitne', 'batao', 'bata do', 'pata hai',
+            '?'  # Question mark
+        ]
+
+        has_question = any(indicator in text_lower for indicator in question_indicators)
+        if not has_question:
+            return False
+
+        # Must explicitly mention cutoff/admission related terms
+        explicit_cutoff_terms = [
+            'cutoff', 'cut-off', 'cutoffs', 'cut-offs',
+            'admission', 'qualify', 'eligible', 'get into',
+            'marks needed', 'score needed', 'minimum marks',
+            'required marks', 'required score'
+        ]
+
+        has_cutoff_term = any(term in text_lower for term in explicit_cutoff_terms)
+        if not has_cutoff_term:
+            return False
+
+        # Must mention specific branch or campus
+        specific_terms = [
+            'cse', 'computer science', 'ece', 'electronics', 'eee', 'electrical',
+            'mechanical', 'mech', 'chemical', 'chem', 'civil', 'manufacturing',
+            'mnc', 'math and computing', 'mathematics', 'eni', 'instrumentation',
+            'biology', 'bio', 'physics', 'chemistry', 'economics', 'pharmacy',
+            'pilani', 'goa', 'hyderabad', 'hyd', 'bits'
+        ]
+
+        has_specific_term = any(term in text_lower for term in specific_terms)
+        if not has_specific_term:
+            return False
+
+        # Additional filters to avoid responding to casual mentions
+        # Don't respond if it's just sharing information (not asking)
+        sharing_indicators = [
+            'i got', 'i scored', 'my friend', 'someone i know',
+            'last year', 'previous year', 'heard that', 'saw that',
+            'according to', 'as per', 'i think', 'probably',
+            'maybe', 'might be', 'could be'
+        ]
+
+        is_sharing = any(indicator in text_lower for indicator in sharing_indicators)
+        if is_sharing and not any(q in text_lower for q in ['what', 'how', 'can', 'will', '?']):
+            return False
+
+        # Must be a reasonably short comment (not a long discussion)
+        word_count = len(text_lower.split())
+        if word_count > 50:  # Too long, probably not a direct question
+            return False
+
+        return True
+
     def generate_response(self, comment) -> str:
         """Generate intelligent response based on comment analysis"""
         comment_text = comment.body.strip()
         author_name = comment.author.name if comment.author else "anonymous"
 
-        # Handle ! commands first
+        # Handle ! commands first (highest priority)
         if comment_text.startswith('!'):
             command = comment_text[1:].strip().lower()
             if command == 'help':
@@ -270,31 +325,41 @@ class BITSATBot:
                 # All other ! commands are cutoff related
                 return self._generate_cutoff_response(author_name, comment_text)
 
-        # Check queries in priority order (most specific first)
+        # Check if bot is mentioned by username
+        bot_username = self.reddit.user.me().name.lower()
+        if bot_username in comment_text.lower():
+            # If mentioned, try to determine what they want
+            if 'help' in comment_text.lower():
+                return self._generate_help_response(author_name)
+            else:
+                return self._generate_cutoff_response(author_name, comment_text)
 
-        # 1. Check if this is a trend query (highest priority - most specific)
-        if self._is_trend_query(comment_text):
-            return self._generate_trend_response(author_name, comment_text)
+        # Check if it's a reply to bot
+        try:
+            if hasattr(comment, 'parent') and comment.parent():
+                parent = comment.parent()
+                if hasattr(parent, 'author') and parent.author and parent.author.name == self.reddit.user.me().name:
+                    # It's a reply to bot, try to help
+                    return self._generate_cutoff_response(author_name, comment_text)
+        except:
+            pass
 
-        # 2. Check if this is a chance query (specific score + branch)
-        if self._is_chance_query(comment_text):
-            return self._generate_chance_response(author_name, comment_text)
-
-        # 3. Check if this is an admission query
-        if self._is_admission_query(comment_text):
-            return self._generate_admission_response(author_name, comment_text)
-
-        # 4. Check if this is a branch comparison query
-        if self._is_branch_comparison_query(comment_text):
-            return self._generate_branch_comparison_response(author_name, comment_text)
-
-        # 5. Check if this is a suggestion query
-        if self._is_suggestion_query(comment_text):
-            return self._generate_suggestion_response(author_name, comment_text)
-
-        # Check if this is a specific cutoff query in natural language
-        if self._is_specific_cutoff_query(comment_text):
-            return self._generate_cutoff_response(author_name, comment_text)
+        # For direct questions, analyze what type of response is needed
+        if self._is_direct_question_to_bot(comment_text):
+            # Try to determine the type of query and respond appropriately
+            if self._is_trend_query(comment_text):
+                return self._generate_trend_response(author_name, comment_text)
+            elif self._is_chance_query(comment_text):
+                return self._generate_chance_response(author_name, comment_text)
+            elif self._is_admission_query(comment_text):
+                return self._generate_admission_response(author_name, comment_text)
+            elif self._is_branch_comparison_query(comment_text):
+                return self._generate_branch_comparison_response(author_name, comment_text)
+            elif self._is_suggestion_query(comment_text):
+                return self._generate_suggestion_response(author_name, comment_text)
+            else:
+                # Default to cutoff response for direct questions
+                return self._generate_cutoff_response(author_name, comment_text)
 
         # This shouldn't happen with current logic, but just in case
         return self._create_unique_response(author_name, comment_text, [])
@@ -320,93 +385,7 @@ class BITSATBot:
 
         return text.strip()
 
-    def _is_specific_cutoff_query(self, comment_text):
-        """Intelligently detect cutoff queries by analyzing word combinations"""
-        # Clean formatting first
-        clean_text = self._clean_text_formatting(comment_text)
-        text_lower = clean_text.lower().strip()
-
-        # Break into words for analysis
-        words = text_lower.split()
-
-        # Remove common stop words
-        stop_words = {'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'with', 'to', 'for', 'of', 'as', 'by', 'bruh', 'bro', 'yaar', 'man'}
-        meaningful_words = [word for word in words if word not in stop_words and len(word) > 1]
-
-        # Cutoff-related terms
-        cutoff_terms = {
-            'cutoff', 'cutoffs', 'cut-off', 'cut-offs', 'minimum', 'required', 'needed',
-            'admission', 'qualifying', 'entrance', 'score', 'scores', 'marks', 'points'
-        }
-
-        # Campus terms
-        campus_terms = {
-            'pilani', 'goa', 'hyderabad', 'hyd', 'bits', 'campus', 'campuses'
-        }
-
-        # Branch terms (including new abbreviations and case variations)
-        branch_terms = {
-            'cse', 'computer', 'science', 'cs', 'ece', 'electronics', 'communication',
-            'eee', 'electrical', 'mechanical', 'mech', 'chemical', 'chem', 'civil',
-            'manufacturing', 'manuf', 'mathematics', 'math', 'maths', 'computing',
-            'biology', 'bio', 'biological', 'physics', 'phy', 'chemistry', 'economics',
-            'eco', 'pharmacy', 'pharm', 'instrumentation', 'instru',
-            # New abbreviations
-            'mnc', 'eni',
-            # Case variations for all terms
-            'CSE', 'COMPUTER', 'SCIENCE', 'CS', 'ECE', 'ELECTRONICS', 'COMMUNICATION',
-            'EEE', 'ELECTRICAL', 'MECHANICAL', 'MECH', 'CHEMICAL', 'CHEM', 'CIVIL',
-            'MANUFACTURING', 'MANUF', 'MATHEMATICS', 'MATH', 'MATHS', 'COMPUTING',
-            'BIOLOGY', 'BIO', 'BIOLOGICAL', 'PHYSICS', 'PHY', 'CHEMISTRY', 'ECONOMICS',
-            'ECO', 'PHARMACY', 'PHARM', 'INSTRUMENTATION', 'INSTRU', 'MNC', 'ENI',
-            # Title case variations
-            'Cse', 'Computer', 'Science', 'Cs', 'Ece', 'Electronics', 'Communication',
-            'Eee', 'Electrical', 'Mechanical', 'Mech', 'Chemical', 'Chem', 'Civil',
-            'Manufacturing', 'Manuf', 'Mathematics', 'Math', 'Maths', 'Computing',
-            'Biology', 'Bio', 'Biological', 'Physics', 'Phy', 'Chemistry', 'Economics',
-            'Eco', 'Pharmacy', 'Pharm', 'Instrumentation', 'Instru', 'Mnc', 'Eni'
-        }
-
-        # Question indicators (more flexible)
-        question_words = {
-            'what', 'how', 'tell', 'show', 'give', 'share', 'know', 'kya', 'kitne',
-            'batao', 'bata', 'chahiye', 'need', 'want', 'looking', 'find', 'can', 'will',
-            'get', 'admission', 'qualify', 'eligible', 'chance', 'possible', 'compare',
-            'comparison', 'vs', 'versus', 'difference', 'better', 'trend', 'trends',
-            'suggest', 'suggestion', 'advice', 'recommend'
-        }
-
-        # Check for word combinations
-        has_cutoff_term = any(word in cutoff_terms for word in meaningful_words)
-        has_campus = any(word in campus_terms for word in meaningful_words)
-        has_branch = any(word in branch_terms for word in meaningful_words)
-        has_question = any(word in question_words for word in meaningful_words)
-
-        # Advanced pattern matching for natural language
-        patterns = [
-            # Direct cutoff mentions with campus/branch
-            has_cutoff_term and (has_campus or has_branch),
-
-            # Campus + Branch combination (like "Goa ECE cutoff")
-            has_campus and has_branch and len(meaningful_words) <= 5,
-
-            # Question + campus/branch + cutoff context (but not general questions)
-            has_question and (has_campus or has_branch) and (has_cutoff_term or any(word in {'score', 'marks', 'needed', 'require', 'admission', 'minimum'} for word in meaningful_words)),
-
-            # Campus + Branch + any cutoff-related context (even without explicit "cutoff" word)
-            has_campus and has_branch and any(word in {'score', 'marks', 'needed', 'require', 'admission', 'minimum'} for word in meaningful_words),
-
-            # Short queries with campus and branch (like "Goa ECE cutoff bruh")
-            has_campus and has_branch and len(words) <= 6,
-
-            # Specific phrases that indicate cutoff queries
-            any(phrase in text_lower for phrase in [
-                'tell me', 'what is', 'how much', 'how many', 'kya hai', 'kitne marks', 'batao',
-                'cutoff for', 'marks for', 'score for', 'needed for'
-            ]) and (has_campus or has_branch) and (has_cutoff_term or any(word in {'score', 'marks', 'needed', 'require', 'admission', 'minimum'} for word in meaningful_words))
-        ]
-
-        return any(patterns)
+    # Removed _is_specific_cutoff_query - now using more restrictive _is_direct_question_to_bot
 
     def _is_admission_query(self, comment_text):
         """Check if this is a 'can I get' admission query"""
@@ -2279,19 +2258,23 @@ class BITSATBot:
         """Generate comprehensive help response in clean table format"""
         response = f"**BITSAT Bot Help Guide**\n\n"
 
+        response += "## **HOW TO USE THE BOT**\n\n"
+        response += "**The bot responds ONLY to:**\n"
+        response += "1. **Commands starting with `!`** (e.g., `!cutoff cse`)\n"
+        response += "2. **Direct mentions** (e.g., `@No_Attendance_Bot what's the cutoff?`)\n"
+        response += "3. **Replies to bot comments**\n"
+        response += "4. **Direct questions** asking for specific cutoff/admission info\n\n"
+
         response += "## **AVAILABLE FEATURES**\n\n"
         response += "| Feature | Command/Query | Example |\n"
         response += "|---------|---------------|----------|\n"
         response += "| **Cutoff Queries** | `!cutoff [branch] [campus]` | `!cutoff cse pilani` |\n"
-        response += "| | Natural language | `goa mechanical cutoff` |\n"
-        response += "| **Branch Comparisons** | `compare [branch1] vs [branch2]` | `compare cse vs ece` |\n"
-        response += "| | Cross-campus | `goa cse vs pilani ece` |\n"
-        response += "| **Cutoff Trends** | `[branch] trends [campus]` | `cse trends pilani` |\n"
-        response += "| | Historical data | `mechanical previous year cutoffs` |\n"
-        response += "| **Smart Suggestions** | `suggest for [score] marks` | `suggest for 285 marks` |\n"
-        response += "| | Branch selection | `help me choose branch` |\n"
-        response += "| **Admission Queries** | `can i get [branch] with [score]` | `can i get cse with 310` |\n"
-        response += "| | Qualification check | `will i qualify for ece with 290` |\n\n"
+        response += "| | Direct question | `What's the CSE cutoff for Pilani?` |\n"
+        response += "| **Branch Comparisons** | `!compare [branch1] vs [branch2]` | `!compare cse vs ece` |\n"
+        response += "| **Cutoff Trends** | `!trends [branch] [campus]` | `!trends cse pilani` |\n"
+        response += "| **Smart Suggestions** | `!suggest [score]` | `!suggest 285` |\n"
+        response += "| **Admission Queries** | Direct question | `Can I get CSE with 310 marks?` |\n"
+        response += "| **Help** | `!help` | `!help` |\n\n"
 
         response += "## **SUPPORTED BRANCHES**\n\n"
         response += "| Category | Branches |\n"
@@ -2318,14 +2301,15 @@ class BITSATBot:
         response += "## **QUICK EXAMPLES**\n\n"
         response += "| Query Type | Example Input |\n"
         response += "|------------|---------------|\n"
-        response += "| Basic cutoff | `!cutoff cse` |\n"
-        response += "| Specific campus | `pilani ece cutoff` |\n"
-        response += "| Comparison | `mechanical vs chemical` |\n"
-        response += "| Trends | `cse cutoff trends` |\n"
-        response += "| Suggestions | `suggest for 295 marks` |\n"
-        response += "| Admission check | `can i get ece with 285` |\n\n"
+        response += "| Command | `!cutoff cse pilani` |\n"
+        response += "| Direct question | `What's the ECE cutoff for Goa?` |\n"
+        response += "| Mention bot | `@No_Attendance_Bot help with cutoffs` |\n"
+        response += "| Comparison | `!compare cse vs ece` |\n"
+        response += "| Trends | `!trends mechanical` |\n"
+        response += "| Suggestions | `!suggest 295` |\n"
+        response += "| Admission check | `Can I get ECE with 285 marks?` |\n\n"
 
-        response += "**Note:** Bot understands both English and Hinglish. Responds only to relevant BITSAT queries.\n\n"
+        response += "**Important:** Bot only responds to explicit commands (!), mentions, replies, or direct questions. It won't respond to casual mentions of 'cutoff' in discussions.\n\n"
         response += "---\n\n"
         response += "**NEW: DM CHATBOT FEATURE**\n\n"
         response += "Send me a DM starting with 'hi' to activate chatbot mode!\n"
