@@ -224,9 +224,14 @@ class BITSATBot:
         comment_text = comment.body.strip()
         author_name = comment.author.name if comment.author else "anonymous"
 
-        # Handle ! commands first (these are always cutoff related)
+        # Handle ! commands first
         if comment_text.startswith('!'):
-            return self._generate_cutoff_response(author_name, comment_text)
+            command = comment_text[1:].strip().lower()
+            if command == 'help':
+                return self._generate_help_response(author_name)
+            else:
+                # All other ! commands are cutoff related
+                return self._generate_cutoff_response(author_name, comment_text)
 
         # Check if this is an admission query
         if self._is_admission_query(comment_text):
@@ -1857,6 +1862,81 @@ class BITSATBot:
                 except:
                     logger.error("Reconnection failed, will retry...")
                     time.sleep(60)
+
+    def _generate_help_response(self, author):
+        """Generate comprehensive help response"""
+        greeting = self._get_random_greeting(author)
+
+        response = f"🤖 **{greeting} Here's everything I can do for you:**\n\n"
+
+        response += "## **🎯 CUTOFF QUERIES**\n"
+        response += "**Commands:**\n"
+        response += "• `!cutoff` - Show all cutoffs\n"
+        response += "• `!cutoff [branch]` - e.g., `!cutoff cse`\n"
+        response += "• `!cutoff [campus]` - e.g., `!cutoff pilani`\n"
+        response += "• `!cutoff [branch] [campus]` - e.g., `!cutoff cse pilani`\n\n"
+
+        response += "**Natural Language:**\n"
+        response += "• *'goa cse cutoff'*, *'mechanical cutoff pilani'*\n"
+        response += "• *'what is the cutoff for ece'*\n"
+        response += "• *'pilani cutoffs'*, *'all cutoffs'*\n\n"
+
+        response += "## **🔥 BRANCH COMPARISONS**\n"
+        response += "**Any branch vs any branch:**\n"
+        response += "• *'compare cse vs ece'*\n"
+        response += "• *'mechanical vs chemical difference'*\n"
+        response += "• *'msc physics vs msc chemistry'*\n"
+        response += "• *'goa cse vs pilani ece'* (cross-campus!)\n\n"
+
+        response += "## **📈 CUTOFF TRENDS**\n"
+        response += "**Historical data + 2025 predictions:**\n"
+        response += "• *'cse cutoff trends'*\n"
+        response += "• *'mechanical trends pilani'*\n"
+        response += "• *'msc physics previous year cutoffs'*\n"
+        response += "• *'pharmacy cutoff history'*\n\n"
+
+        response += "## **🎯 SMART SUGGESTIONS**\n"
+        response += "**Score-based advice:**\n"
+        response += "• *'suggest branches for 285 marks'*\n"
+        response += "• *'help me choose branch'*\n"
+        response += "• *'which campus should I choose'*\n"
+        response += "• *'confused about branch selection'*\n\n"
+
+        response += "## **🤔 ADMISSION QUERIES**\n"
+        response += "**Reverse cutoff lookup:**\n"
+        response += "• *'can I get cse with 310 marks'*\n"
+        response += "• *'will I qualify for ece with 290'*\n"
+        response += "• *'chances of getting mechanical with 270'*\n\n"
+
+        response += "## **📊 SUPPORTED BRANCHES**\n"
+        response += "**🔧 Engineering:** CSE, ECE, EEE, Mechanical, Chemical, Civil, MnC, ENI, Manufacturing\n"
+        response += "**🧬 M.Sc Programs:** Math, Physics, Chemistry, Biology, Economics\n"
+        response += "**💊 Other:** Pharmacy\n\n"
+
+        response += "## **🏫 SUPPORTED CAMPUSES**\n"
+        response += "**🏛️ Pilani** • **🏖️ Goa** • **🏙️ Hyderabad**\n\n"
+
+        response += "## **💡 PRO TIPS**\n"
+        response += "• All data is **2024-25 official** from BITS website\n"
+        response += "• Trends use **real 2022-2024** historical data\n"
+        response += "• Comparisons include **placement packages**\n"
+        response += "• I understand **Hinglish** and casual language\n"
+        response += "• I only respond to **relevant queries** (no spam)\n\n"
+
+        response += "## **🚀 EXAMPLES**\n"
+        response += "```\n"
+        response += "!cutoff cse\n"
+        response += "goa mechanical cutoff kya hai?\n"
+        response += "compare cse vs ece\n"
+        response += "cse trends pilani\n"
+        response += "suggest for 295 marks\n"
+        response += "can i get ece with 285?\n"
+        response += "```\n\n"
+
+        response += f"**🎭 {self._get_random_humor('suggestion_ending')}**\n\n"
+        response += "*Made with ❤️ for r/bitsatards by No_Attendance_Bot*"
+
+        return response
 
 if __name__ == "__main__":
     bot = BITSATBot()
