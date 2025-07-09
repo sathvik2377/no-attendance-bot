@@ -229,24 +229,26 @@ class BITSATBot:
         if self._is_specific_cutoff_query(comment.body):
             return True
 
-        # Check for admission queries (can I get, will I qualify, etc.)
-        if self._is_admission_query(comment.body):
-            return True
+        # Check queries in priority order (most specific first)
 
-        # Check for branch comparison queries
-        if self._is_branch_comparison_query(comment.body):
-            return True
-
-        # Check for trend queries
+        # 1. Check for trend queries first (most specific)
         if self._is_trend_query(comment.body):
             return True
 
-        # Check for suggestion queries
-        if self._is_suggestion_query(comment.body):
+        # 2. Check for chance queries
+        if self._is_chance_query(comment.body):
             return True
 
-        # Check for chance queries
-        if self._is_chance_query(comment.body):
+        # 3. Check for admission queries (can I get, will I qualify, etc.)
+        if self._is_admission_query(comment.body):
+            return True
+
+        # 4. Check for branch comparison queries
+        if self._is_branch_comparison_query(comment.body):
+            return True
+
+        # 5. Check for suggestion queries
+        if self._is_suggestion_query(comment.body):
             return True
 
         return False
@@ -440,11 +442,10 @@ class BITSATBot:
         clean_text = self._clean_text_formatting(comment_text)
         text_lower = clean_text.lower().strip()
 
-        # Comparison patterns - more comprehensive
+        # Strong comparison patterns (must have explicit comparison words)
         comparison_patterns = [
             'compare', 'comparison', 'vs', 'versus', 'difference between',
-            'better', 'which is better', 'difference', 'choose between',
-            'pilani', 'goa', 'hyderabad', 'hyd'  # Campus names also indicate comparison
+            'better', 'which is better', 'difference', 'choose between'
         ]
 
         # Must contain comparison pattern
@@ -465,39 +466,49 @@ class BITSATBot:
         branch_count = sum(1 for word in words if word in branch_terms)
         campus_count = sum(1 for word in words if word in campus_terms)
 
-        # It's a comparison if:
-        # 1. Has comparison keywords AND (multiple branches OR campus+branch combination)
-        # 2. OR has campus names with branches (like "pilani mech vs goa eco")
-        is_comparison = (has_comparison and (branch_count >= 2 or (campus_count >= 1 and branch_count >= 1))) or \
-                       (campus_count >= 2 and branch_count >= 2) or \
-                       ('vs' in text_lower and branch_count >= 2)
+        # It's a comparison ONLY if:
+        # 1. Has explicit comparison keywords AND multiple branches/campuses
+        # 2. OR has "vs" with multiple branches
+        is_comparison = (has_comparison and (branch_count >= 2 or (campus_count >= 2 and branch_count >= 1))) or \
+                       ('vs' in text_lower and (branch_count >= 2 or campus_count >= 2))
 
         return is_comparison
 
     def _is_trend_query(self, comment_text):
-        """Check if this is a trends/previous year query"""
+        """Check if this is a trends/previous year query (improved specificity)"""
         clean_text = self._clean_text_formatting(comment_text)
         text_lower = clean_text.lower().strip()
 
-        # Trend patterns
-        trend_patterns = [
+        # Strong trend indicators
+        strong_trend_patterns = [
             'trend', 'trends', 'previous year', 'last year', 'past years',
-            'history', 'over years', 'increasing', 'decreasing', 'pattern',
-            'how has', 'change over', 'yearly', 'annual'
+            'history', 'historical', 'over years', 'year wise', 'yearly',
+            'cutoff trend', 'cutoff history', 'previous cutoff', 'past cutoff',
+            'how has', 'change over', 'annual', 'over time'
         ]
 
-        # Must contain trend pattern
-        has_trend = any(pattern in text_lower for pattern in trend_patterns)
+        # Exclude comparison patterns to avoid conflicts
+        comparison_exclusions = [
+            'vs', 'versus', 'compare', 'comparison', 'difference between',
+            'better', 'which is better', 'choose between'
+        ]
+
+        # Must contain strong trend pattern
+        has_trend = any(pattern in text_lower for pattern in strong_trend_patterns)
+
+        # Must NOT contain comparison patterns
+        has_comparison = any(pattern in text_lower for pattern in comparison_exclusions)
 
         # Must mention cutoff or branch
         cutoff_branch_terms = [
             'cutoff', 'cut-off', 'score', 'marks', 'cse', 'ece', 'mechanical',
-            'chemical', 'branch', 'admission'
+            'chemical', 'branch', 'admission', 'math', 'maths', 'eee', 'civil'
         ]
 
         has_cutoff_branch = any(term in text_lower for term in cutoff_branch_terms)
 
-        return has_trend and has_cutoff_branch
+        # Only return true if it's clearly a trend query and NOT a comparison
+        return has_trend and has_cutoff_branch and not has_comparison
 
     def _is_suggestion_query(self, comment_text):
         """Check if this is asking for suggestions/advice"""
