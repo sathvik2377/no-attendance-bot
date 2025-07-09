@@ -10,6 +10,7 @@ import random
 import time
 import logging
 import os
+import pytz
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -106,19 +107,21 @@ class BITSATBot:
     
     def _is_active_hours(self) -> bool:
         """Check if bot should be active (9 AM to 1 AM IST)"""
-        now = datetime.now()
-        current_hour = now.hour
-        current_time = now.strftime("%H:%M")
+        # Get current time in IST (Indian Standard Time)
+        ist = pytz.timezone('Asia/Kolkata')
+        now_ist = datetime.now(ist)
+        current_hour = now_ist.hour
+        current_time = now_ist.strftime("%H:%M IST")
 
-        # Active from 9 AM (09:00) to 1 AM (01:00) next day
+        # Active from 9 AM (09:00) to 1 AM (01:00) next day IST
         # Active hours: 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0
-        # Inactive hours: 1, 2, 3, 4, 5, 6, 7, 8 (1 AM to 9 AM)
+        # Inactive hours: 1, 2, 3, 4, 5, 6, 7, 8 (1 AM to 9 AM IST)
         if 1 <= current_hour <= 8:
             logger.debug(f"Inactive hours detected: {current_time} (hour {current_hour})")
-            return False  # Inactive from 1 AM to 8:59 AM
+            return False  # Inactive from 1 AM to 8:59 AM IST
 
         logger.debug(f"Active hours: {current_time} (hour {current_hour})")
-        return True  # Active from 9 AM to 12:59 AM
+        return True  # Active from 9 AM to 12:59 AM IST
 
     def should_respond(self, comment) -> bool:
         """Determine if the bot should respond to a comment"""
@@ -1010,8 +1013,10 @@ class BITSATBot:
             for comment in self.subreddit.stream.comments(skip_existing=True):
                 # Check time during stream (bot will exit if inactive)
                 if not self._is_active_hours():
-                    current_time = datetime.now().strftime("%H:%M")
-                    current_hour = datetime.now().hour
+                    ist = pytz.timezone('Asia/Kolkata')
+                    current_time_ist = datetime.now(ist)
+                    current_time = current_time_ist.strftime("%H:%M IST")
+                    current_hour = current_time_ist.hour
                     logger.info(f"🛑 STREAM SHUTDOWN: Reached inactive hours at {current_time} (hour {current_hour})")
                     logger.info("💰 Exiting comment stream to save Railway hours")
                     break
@@ -1035,17 +1040,19 @@ class BITSATBot:
     
     def run(self):
         """Main bot loop with smart Railway hour management"""
-        current_time = datetime.now()
-        current_hour = current_time.hour
-        time_str = current_time.strftime("%H:%M")
+        # Get current time in IST
+        ist = pytz.timezone('Asia/Kolkata')
+        current_time_ist = datetime.now(ist)
+        current_hour = current_time_ist.hour
+        time_str = current_time_ist.strftime("%H:%M IST")
 
         logger.info(f"🤖 Bot starting at {time_str} (hour {current_hour})")
 
         # Check if bot should be active before even starting
         if not self._is_active_hours():
             logger.info(f"⏰ Bot starting during inactive hours ({time_str}). Exiting to save Railway hours.")
-            logger.info("💤 Inactive hours: 1 AM - 8:59 AM")
-            logger.info("⏰ Active hours: 9 AM - 12:59 AM")
+            logger.info("💤 Inactive hours: 1 AM - 8:59 AM IST")
+            logger.info("⏰ Active hours: 9 AM - 12:59 AM IST")
             logger.info("🔄 Bot will restart automatically during active hours")
             return
 
@@ -1061,11 +1068,13 @@ class BITSATBot:
             try:
                 # Check if we should stop to save Railway hours
                 if not self._is_active_hours():
-                    current_time = datetime.now().strftime("%H:%M")
-                    current_hour = datetime.now().hour
+                    ist = pytz.timezone('Asia/Kolkata')
+                    current_time_ist = datetime.now(ist)
+                    current_time = current_time_ist.strftime("%H:%M IST")
+                    current_hour = current_time_ist.hour
                     logger.info(f"🛑 SHUTDOWN: Reached inactive hours at {current_time} (hour {current_hour})")
-                    logger.info("💰 Stopping bot to save Railway hours during night (1 AM - 9 AM)")
-                    logger.info("⏰ Bot will restart automatically at 9 AM. Good night! 😴")
+                    logger.info("💰 Stopping bot to save Railway hours during night (1 AM - 9 AM IST)")
+                    logger.info("⏰ Bot will restart automatically at 9 AM IST. Good night! 😴")
                     break
 
                 self.process_comments()
