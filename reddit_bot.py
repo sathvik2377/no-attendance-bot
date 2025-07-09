@@ -88,6 +88,15 @@ class BITSATBot:
     def authenticate(self):
         """Authenticate with Reddit API using environment variables"""
         try:
+            # Check if all required environment variables are present
+            required_vars = ['REDDIT_CLIENT_ID', 'REDDIT_CLIENT_SECRET', 'REDDIT_USERNAME', 'REDDIT_PASSWORD']
+            missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+            if missing_vars:
+                logger.error(f"Missing environment variables: {missing_vars}")
+                return False
+
+            logger.info("Creating Reddit instance...")
             self.reddit = praw.Reddit(
                 client_id=os.getenv('REDDIT_CLIENT_ID'),
                 client_secret=os.getenv('REDDIT_CLIENT_SECRET'),
@@ -97,12 +106,31 @@ class BITSATBot:
             )
 
             # Test authentication
-            logger.info(f"Authenticated as: {self.reddit.user.me()}")
-            self.subreddit = self.reddit.subreddit('bitsatards')  # Now working in bitsatards
+            logger.info("Testing authentication...")
+            user = self.reddit.user.me()
+            logger.info(f"✅ Authenticated as: {user}")
+
+            # Test subreddit access
+            logger.info("Testing subreddit access...")
+            self.subreddit = self.reddit.subreddit('bitsatards')
+            logger.info(f"✅ Connected to r/{self.subreddit.display_name}")
+
             return True
 
         except Exception as e:
-            logger.error(f"Authentication failed: {e}")
+            error_msg = str(e).lower()
+            if "403" in error_msg or "forbidden" in error_msg:
+                logger.error("❌ 403 FORBIDDEN - Possible causes:")
+                logger.error("   • Wrong username/password")
+                logger.error("   • Account suspended/banned")
+                logger.error("   • Two-factor authentication enabled")
+                logger.error("   • Rate limited")
+            elif "401" in error_msg or "unauthorized" in error_msg:
+                logger.error("❌ 401 UNAUTHORIZED - Check client_id/client_secret")
+            else:
+                logger.error(f"❌ Authentication failed: {e}")
+
+            logger.error("Failed to authenticate. Please check your credentials.")
             return False
     
     def _is_active_hours(self) -> bool:
@@ -1826,9 +1854,18 @@ class BITSATBot:
             logger.info("🔄 Bot will restart automatically during active hours")
             return
 
-        if not self.authenticate():
-            logger.error("Failed to authenticate. Please check your credentials.")
-            return
+        # Retry authentication up to 3 times
+        max_auth_retries = 3
+        for attempt in range(max_auth_retries):
+            logger.info(f"🔐 Authentication attempt {attempt + 1}/{max_auth_retries}")
+            if self.authenticate():
+                break
+            elif attempt < max_auth_retries - 1:
+                logger.info(f"⏳ Retrying authentication in 60 seconds...")
+                time.sleep(60)
+            else:
+                logger.error("❌ Failed to authenticate after 3 attempts. Exiting.")
+                return
 
         logger.info("BITSAT Bot started successfully!")
         logger.info(f"Monitoring r/{self.subreddit.display_name}")
@@ -1852,15 +1889,38 @@ class BITSATBot:
                 logger.info("Bot stopped by user")
                 break
             except Exception as e:
-                logger.error(f"Unexpected error: {e}")
-                logger.info("Restarting in 30 seconds...")
-                time.sleep(30)
+                error_msg = str(e).lower()
+
+                if "403" in error_msg or "forbidden" in error_msg:
+                    logger.error(f"❌ 403 FORBIDDEN: {e}")
+                    logger.error("   Possible causes:")
+                    logger.error("   • Account banned/suspended")
+                    logger.error("   • Rate limited")
+                    logger.error("   • Permission issues")
+                    logger.error("   • Wrong credentials")
+                elif "429" in error_msg or "rate" in error_msg:
+                    logger.error(f"⏰ RATE LIMITED: {e}")
+                    logger.info("Waiting 5 minutes for rate limit to reset...")
+                    time.sleep(300)  # Wait 5 minutes
+                    continue
+                elif "401" in error_msg or "unauthorized" in error_msg:
+                    logger.error(f"❌ 401 UNAUTHORIZED: {e}")
+                    logger.error("   Check client_id and client_secret")
+                else:
+                    logger.error(f"💥 Unexpected error: {e}")
+
+                logger.info("🔄 Restarting in 60 seconds...")
+                time.sleep(60)
+
                 # Try to reconnect
                 try:
-                    self.authenticate()
-                    logger.info("Reconnected successfully")
-                except:
-                    logger.error("Reconnection failed, will retry...")
+                    logger.info("🔐 Attempting to reconnect...")
+                    if self.authenticate():
+                        logger.info("✅ Reconnected successfully")
+                    else:
+                        logger.error("❌ Reconnection failed")
+                except Exception as reconnect_error:
+                    logger.error(f"❌ Reconnection error: {reconnect_error}")
                     time.sleep(60)
 
     def _generate_help_response(self, author):
