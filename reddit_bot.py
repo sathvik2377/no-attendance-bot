@@ -1265,78 +1265,78 @@ class BITSATBot:
         """Generate trends/previous year response"""
         query_lower = query.lower()
 
-        # Comprehensive historical trend data (Official BITS Data - converted to 390 scale)
+        # Comprehensive historical trend data (Official BITS Data - 2022-2024 confirmed)
         trend_data = {
             'cse': {
-                'pilani': {'2024': 327, '2023': 331, '2022': 320, '2021': 364, '2020': 372},
-                'goa': {'2024': 301, '2023': 295, '2022': 286, '2021': 328, '2020': 347},
-                'hyderabad': {'2024': 298, '2023': 284, '2022': 279, '2021': 319, '2020': 336}
+                'pilani': {'2024': 327, '2023': 331, '2022': 320},
+                'goa': {'2024': 301, '2023': 295, '2022': 286},
+                'hyderabad': {'2024': 298, '2023': 284, '2022': 279}
             },
             'ece': {
-                'pilani': {'2024': 314, '2023': 296, '2022': 279, '2021': 322, '2020': 340},
-                'goa': {'2024': 287, '2023': 267, '2022': 256, '2021': 293, '2020': 320},
-                'hyderabad': {'2024': 284, '2023': 265, '2022': 252, '2021': 285, '2020': 314}
+                'pilani': {'2024': 314, '2023': 296, '2022': 279},
+                'goa': {'2024': 287, '2023': 267, '2022': 256},
+                'hyderabad': {'2024': 284, '2023': 265, '2022': 252}
             },
             'eee': {
-                'pilani': {'2024': 292, '2023': 272, '2022': 258, '2021': 304, '2020': 333},
-                'goa': {'2024': 278, '2023': 252, '2022': 237, '2021': 273, '2020': 306},
-                'hyderabad': {'2024': 275, '2023': 251, '2022': 230, '2021': 262, '2020': 300}
+                'pilani': {'2024': 292, '2023': 272, '2022': 258},
+                'goa': {'2024': 278, '2023': 252, '2022': 237},
+                'hyderabad': {'2024': 275, '2023': 251, '2022': 230}
             },
             'mechanical': {
-                'pilani': {'2024': 266, '2023': 244, '2022': 223, '2021': 262, '2020': 298},
-                'goa': {'2024': 254, '2023': 223, '2022': 191, '2021': 221, '2020': 269},
-                'hyderabad': {'2024': 251, '2023': 218, '2022': 182, '2021': 192, '2020': 260}
+                'pilani': {'2024': 266, '2023': 244, '2022': 223},
+                'goa': {'2024': 254, '2023': 223, '2022': 191},
+                'hyderabad': {'2024': 251, '2023': 218, '2022': 182}
             },
             'chemical': {
-                'pilani': {'2024': 247, '2023': 224, '2022': 191, '2021': 223, '2020': 270},
-                'goa': {'2024': 239, '2023': 209, '2022': 165, '2021': 145, '2020': 248},
-                'hyderabad': {'2024': 238, '2023': 207, '2022': 162, '2021': 146, '2020': 240}
+                'pilani': {'2024': 247, '2023': 224, '2022': 191},
+                'goa': {'2024': 239, '2023': 209, '2022': 165},
+                'hyderabad': {'2024': 238, '2023': 207, '2022': 162}
             },
             'civil': {
-                'pilani': {'2024': 238, '2023': 218, '2022': 185, '2021': 215, '2020': 260},
-                'hyderabad': {'2024': 235, '2023': 215, '2022': 180, '2021': 210, '2020': 255}
+                'pilani': {'2024': 238, '2023': 213, '2022': 167},
+                'hyderabad': {'2024': 235, '2023': 204, '2022': 158}
             },
             'mnc': {
-                'pilani': {'2024': 318, '2023': 308, '2022': 295, '2021': 340, '2020': 365},
-                'goa': {'2024': 295, '2023': 285, '2022': 270, '2021': 315, '2020': 340},
-                'hyderabad': {'2024': 293, '2023': 283, '2022': 268, '2021': 310, '2020': 335}
+                'pilani': {'2024': 318, '2023': None, '2022': None},  # MnC added in 2024
+                'goa': {'2024': 295, '2023': None, '2022': None},
+                'hyderabad': {'2024': 293, '2023': None, '2022': None}
             },
             'eni': {
-                'pilani': {'2024': 282, '2023': 262, '2022': 245, '2021': 285, '2020': 315},
-                'goa': {'2024': 270, '2023': 250, '2022': 230, '2021': 270, '2020': 300},
-                'hyderabad': {'2024': 270, '2023': 250, '2022': 230, '2021': 270, '2020': 300}
+                'pilani': {'2024': 282, '2023': 266, '2022': 249},
+                'goa': {'2024': 270, '2023': 244, '2022': 224},
+                'hyderabad': {'2024': 270, '2023': 244, '2022': 222}
             },
             'manufacturing': {
-                'pilani': {'2024': 243, '2023': 223, '2022': 190, '2021': 220, '2020': 265}
+                'pilani': {'2024': 243, '2023': 220, '2022': 184}
             },
             'pharmacy': {
-                'pilani': {'2024': 165, '2023': 155, '2022': 140, '2021': 170, '2020': 195},
-                'hyderabad': {'2024': 161, '2023': 151, '2022': 135, '2021': 165, '2020': 190}
+                'pilani': {'2024': 165, '2023': 153, '2022': 125},
+                'hyderabad': {'2024': 161, '2023': 135, '2022': 109}
             },
             'biology': {
-                'pilani': {'2024': 236, '2023': 216, '2022': 185, '2021': 215, '2020': 250},
-                'goa': {'2024': 234, '2023': 214, '2022': 180, '2021': 210, '2020': 245},
-                'hyderabad': {'2024': 234, '2023': 214, '2022': 180, '2021': 210, '2020': 245}
+                'pilani': {'2024': 236, '2023': 212, '2022': 171},
+                'goa': {'2024': 234, '2023': 204, '2022': 164},
+                'hyderabad': {'2024': 234, '2023': 204, '2022': 158}
             },
             'physics': {
-                'pilani': {'2024': 254, '2023': 234, '2022': 200, '2021': 230, '2020': 265},
-                'goa': {'2024': 248, '2023': 228, '2022': 195, '2021': 225, '2020': 260},
-                'hyderabad': {'2024': 245, '2023': 225, '2022': 190, '2021': 220, '2020': 255}
+                'pilani': {'2024': 254, '2023': 235, '2022': 214},
+                'goa': {'2024': 248, '2023': 222, '2022': 188},
+                'hyderabad': {'2024': 245, '2023': 219, '2022': 173}
             },
             'chemistry': {
-                'pilani': {'2024': 241, '2023': 221, '2022': 190, '2021': 220, '2020': 255},
-                'goa': {'2024': 236, '2023': 216, '2022': 185, '2021': 215, '2020': 250},
-                'hyderabad': {'2024': 235, '2023': 215, '2022': 180, '2021': 210, '2020': 245}
+                'pilani': {'2024': 241, '2023': 213, '2022': 168},
+                'goa': {'2024': 236, '2023': 205, '2022': 163},
+                'hyderabad': {'2024': 235, '2023': 205, '2022': 160}
             },
             'mathematics': {
-                'pilani': {'2024': 256, '2023': 236, '2022': 205, '2021': 235, '2020': 270},
-                'goa': {'2024': 249, '2023': 229, '2022': 200, '2021': 230, '2020': 265},
-                'hyderabad': {'2024': 247, '2023': 227, '2022': 195, '2021': 225, '2020': 260}
+                'pilani': {'2024': 256, '2023': 236, '2022': 214},
+                'goa': {'2024': 249, '2023': 221, '2022': 187},
+                'hyderabad': {'2024': 247, '2023': 219, '2022': 177}
             },
             'economics': {
-                'pilani': {'2024': 271, '2023': 251, '2022': 220, '2021': 250, '2020': 285},
-                'goa': {'2024': 263, '2023': 243, '2022': 215, '2021': 245, '2020': 280},
-                'hyderabad': {'2024': 261, '2023': 241, '2022': 210, '2021': 240, '2020': 275}
+                'pilani': {'2024': 271, '2023': 257, '2022': 247},
+                'goa': {'2024': 263, '2023': 239, '2022': 230},
+                'hyderabad': {'2024': 261, '2023': 236, '2022': 220}
             }
         }
 
@@ -1376,15 +1376,22 @@ class BITSATBot:
 
                     response += f"| {year} | **{cutoff}** | {change_str} {trend_emoji} |\n"
 
-                # Calculate trends and predictions
-                if '2024' in campus_data and '2020' in campus_data:
-                    four_year_change = campus_data['2024'] - campus_data['2020']
-                    avg_change = four_year_change / 4
-                    response += f"\n📊 **4-Year Trend (2020-2024):** +{four_year_change} points ({avg_change:.1f}/year average)\n"
+                # Calculate trends and predictions (using available data)
+                if '2024' in campus_data and '2022' in campus_data and campus_data['2022'] is not None:
+                    two_year_change = campus_data['2024'] - campus_data['2022']
+                    avg_change = two_year_change / 2
+                    response += f"\n📊 **2-Year Trend (2022-2024):** +{two_year_change} points ({avg_change:.1f}/year average)\n"
 
-                    # 2025 Prediction
+                    # 2025 Prediction based on recent trend
                     predicted_2025 = campus_data['2024'] + int(avg_change)
                     response += f"🔮 **2025 Prediction:** ~{predicted_2025} (±5 points)\n"
+                elif '2024' in campus_data and '2023' in campus_data and campus_data['2023'] is not None:
+                    one_year_change = campus_data['2024'] - campus_data['2023']
+                    response += f"\n📊 **1-Year Change (2023-2024):** {one_year_change:+d} points\n"
+
+                    # Conservative prediction
+                    predicted_2025 = campus_data['2024'] + one_year_change
+                    response += f"🔮 **2025 Prediction:** ~{predicted_2025} (±7 points)\n"
 
             else:
                 # All campuses trend
@@ -1392,15 +1399,22 @@ class BITSATBot:
                 for campus in ['pilani', 'goa', 'hyderabad']:
                     if campus in trend_data[detected_branch]:
                         campus_data = trend_data[detected_branch][campus]
-                        current = campus_data['2023']
-                        old = campus_data['2020']
-                        change = current - old
-                        response += f"🏛️ **{campus.upper()}:** {old} → {current} (+{change})\n"
+                        current = campus_data['2024']
+                        if '2022' in campus_data and campus_data['2022'] is not None:
+                            old = campus_data['2022']
+                            change = current - old
+                            response += f"🏛️ **{campus.upper()}:** {old} → {current} (+{change} in 2 years)\n"
+                        elif '2023' in campus_data and campus_data['2023'] is not None:
+                            old = campus_data['2023']
+                            change = current - old
+                            response += f"🏛️ **{campus.upper()}:** {old} → {current} ({change:+d} in 1 year)\n"
+                        else:
+                            response += f"🏛️ **{campus.upper()}:** {current} (2024 data)\n"
 
-                response += f"\n📈 **Overall Pattern:** Rising ~5-7 points per year\n"
+                response += f"\n📈 **Overall Pattern:** Most branches rising 3-15 points per year\n"
 
             # Add prediction
-            response += f"\n🔮 **2024 Prediction:** Expect 4-6 point increase\n"
+            response += f"\n🔮 **2025 Prediction:** Expect 3-8 point increase based on recent trends\n"
             response += f"⚠️ **Reality Check:** Trends can change based on difficulty & applications!\n\n"
 
             # Add humor
