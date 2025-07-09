@@ -245,6 +245,10 @@ class BITSATBot:
         if self._is_suggestion_query(comment.body):
             return True
 
+        # Check for chance queries
+        if self._is_chance_query(comment.body):
+            return True
+
         return False
     
     def generate_response(self, comment) -> str:
@@ -276,6 +280,10 @@ class BITSATBot:
         # Check if this is a suggestion query
         if self._is_suggestion_query(comment_text):
             return self._generate_suggestion_response(author_name, comment_text)
+
+        # Check if this is a chance query
+        if self._is_chance_query(comment_text):
+            return self._generate_chance_response(author_name, comment_text)
 
         # Check if this is a specific cutoff query in natural language
         if self._is_specific_cutoff_query(comment_text):
@@ -515,6 +523,36 @@ class BITSATBot:
         has_context = any(term in text_lower for term in context_terms)
 
         return has_suggestion and has_context
+
+    def _is_chance_query(self, comment_text):
+        """Check if this is asking for admission chances with specific score"""
+        clean_text = self._clean_text_formatting(comment_text)
+        text_lower = clean_text.lower().strip()
+
+        # Chance patterns
+        chance_patterns = [
+            'chance', 'chances', 'probability', 'likely', 'possibility',
+            'any chance', 'what are my chances', 'chances of getting',
+            'can i get', 'will i get', 'possible to get'
+        ]
+
+        # Must contain chance pattern
+        has_chance = any(pattern in text_lower for pattern in chance_patterns)
+
+        # Must mention score/marks and branch
+        import re
+        has_score = bool(re.search(r'\b(\d{2,3})\b', text_lower))
+
+        branch_terms = [
+            'cse', 'computer', 'ece', 'electronics', 'eee', 'electrical',
+            'mechanical', 'mech', 'chemical', 'chem', 'civil', 'manufacturing',
+            'mnc', 'math', 'mathematics', 'computing', 'eni', 'instrumentation',
+            'biology', 'bio', 'physics', 'chemistry', 'economics', 'pharmacy'
+        ]
+
+        has_branch = any(term in text_lower for term in branch_terms)
+
+        return has_chance and has_score and has_branch
 
     def _create_unique_response(self, author, comment_text, meaningful_words):
         """Create a completely unique response every time"""
@@ -1525,23 +1563,55 @@ class BITSATBot:
             if detected_campus and detected_campus in trend_data[detected_branch]:
                 # Specific campus trend
                 campus_data = trend_data[detected_branch][detected_campus]
-                response += f"**{detected_campus.upper()} - {detected_branch.upper()} CUTOFF TRENDS**\n\n"
-                response += "| Year | Cutoff | Change | Trend |\n"
-                response += "|------|--------|--------|-------|\n"
+                greeting = self._get_random_greeting(author)
+                response = f"**{greeting}, here are the {detected_campus.upper()} {detected_branch.upper()} cutoffs:**\n\n"
+
+                # First show the last 3 years cutoffs clearly
+                response += "**RECENT CUTOFFS (Last 3 Years)**\n\n"
+                response += "| Year | Cutoff Score | Status |\n"
+                response += "|------|-------------|--------|\n"
 
                 years = sorted(campus_data.keys(), reverse=True)
+                recent_years = years[:3]  # Last 3 years
+
+                for year in recent_years:
+                    cutoff = campus_data[year]
+                    if cutoff is not None:
+                        status = "Latest" if year == years[0] else "Previous"
+                        response += f"| {year} | **{cutoff}** | {status} |\n"
+
+                # Then show detailed trend analysis
+                response += f"\n**DETAILED TREND ANALYSIS**\n\n"
+                response += "| Year | Cutoff | Year-on-Year Change | Trend Pattern |\n"
+                response += "|------|--------|-------------------|---------------|\n"
+
                 for i, year in enumerate(years):
                     cutoff = campus_data[year]
-                    if i < len(years) - 1:
-                        prev_cutoff = campus_data[years[i+1]]
-                        change = cutoff - prev_cutoff
-                        change_str = f"+{change}" if change > 0 else str(change)
-                        trend_desc = "Rising" if change > 0 else "Falling" if change < 0 else "Stable"
-                    else:
-                        change_str = "-"
-                        trend_desc = "Baseline"
+                    if cutoff is not None:
+                        if i < len(years) - 1:
+                            prev_year = years[i+1]
+                            prev_cutoff = campus_data[prev_year]
+                            if prev_cutoff is not None:
+                                change = cutoff - prev_cutoff
+                                change_str = f"+{change}" if change > 0 else str(change)
+                                if change > 15:
+                                    trend_desc = "Sharp Rise"
+                                elif change > 5:
+                                    trend_desc = "Rising"
+                                elif change > -5:
+                                    trend_desc = "Stable"
+                                elif change > -15:
+                                    trend_desc = "Falling"
+                                else:
+                                    trend_desc = "Sharp Fall"
+                            else:
+                                change_str = "-"
+                                trend_desc = "No data"
+                        else:
+                            change_str = "-"
+                            trend_desc = "Baseline year"
 
-                    response += f"| {year} | {cutoff} | {change_str} | {trend_desc} |\n"
+                        response += f"| {year} | {cutoff} | {change_str} | {trend_desc} |\n"
 
                 # Calculate trends and predictions (using available data)
                 if '2024' in campus_data and '2022' in campus_data and campus_data['2022'] is not None:
@@ -1615,7 +1685,7 @@ class BITSATBot:
         return response
 
     def _generate_suggestion_response(self, author, query):
-        """Generate smart suggestions based on user query"""
+        """Generate detailed, accurate and informative suggestions based on user query"""
         query_lower = query.lower()
 
         # Extract score if mentioned
@@ -1624,52 +1694,160 @@ class BITSATBot:
         user_score = int(score_match.group(1)) if score_match else None
 
         if user_score:
-            # Score-based suggestions
-            response = f"🎯 **{author.upper()}, here are smart suggestions for {user_score}/390:**\n\n"
+            greeting = self._get_random_greeting(author)
+            response = f"**{greeting}, here's your detailed roadmap for {user_score}/390:**\n\n"
 
-            if user_score >= 320:
-                response += "🔥 **EXCELLENT SCORE! You're in the elite zone:**\n"
-                response += "✅ **100% Safe:** CSE/ECE at any campus, MnC anywhere\n"
-                response += "🎯 **Go For:** Pilani CSE (prestige + ₹28L avg package)\n"
-                response += "🏖️ **Alternative:** Goa CSE (beach life + ₹26L avg package)\n"
-                response += "💡 **Pro Tip:** All top branches open - choose by interest!\n\n"
-                response += "🏆 **Reality:** You're in the top 1% - any choice will be golden!"
+            if user_score >= 330:
+                response += "**EXCEPTIONAL SCORE - TOP 0.5% TERRITORY**\n\n"
+                response += "| Branch | Campus | Probability | Package Range | Why Choose |\n"
+                response += "|--------|--------|-------------|---------------|------------|\n"
+                response += "| CSE | Pilani | 100% | ₹25-65L | Ultimate prestige, best alumni network |\n"
+                response += "| CSE | Goa/Hyd | 100% | ₹24-60L | Excellent academics, better lifestyle |\n"
+                response += "| ECE | Pilani | 100% | ₹22-55L | Hardware+software, VLSI opportunities |\n"
+                response += "| MnC | Any | 100% | ₹24-60L | Finance+tech combo, quant roles |\n\n"
+                response += "**STRATEGIC ADVICE:**\n"
+                response += "• Primary choice: Pilani CSE (if you want maximum prestige)\n"
+                response += "• Lifestyle choice: Goa CSE (beach campus, relaxed environment)\n"
+                response += "• Unique option: MnC (emerging field, finance sector opportunities)\n"
+                response += "• Reality check: You can literally choose based on campus preference\n\n"
+
+            elif user_score >= 315:
+                response += "**EXCELLENT SCORE - TOP 1% CATEGORY**\n\n"
+                response += "| Branch | Campus | Probability | Package Range | Strategy |\n"
+                response += "|--------|--------|-------------|---------------|----------|\n"
+                response += "| CSE | Pilani | 85% | ₹25-65L | Stretch goal, worth the risk |\n"
+                response += "| CSE | Goa/Hyd | 100% | ₹24-60L | Very safe, excellent choice |\n"
+                response += "| ECE | Pilani | 100% | ₹22-55L | Safe backup, great prospects |\n"
+                response += "| MnC | Any | 100% | ₹24-60L | Unique path, finance opportunities |\n\n"
+                response += "**RECOMMENDED STRATEGY:**\n"
+                response += "• First preference: CSE at all campuses (Pilani is achievable)\n"
+                response += "• Safe backup: ECE Pilani (guaranteed admission)\n"
+                response += "• Consider: MnC if interested in finance+tech combination\n"
+                response += "• Campus tip: Goa offers best work-life balance\n\n"
 
             elif user_score >= 300:
-                response += "💪 **GREAT SCORE! Multiple excellent options:**\n"
-                response += "✅ **Very Safe:** CSE Goa/Hyd (₹26L avg), ECE Pilani (₹24L avg)\n"
-                response += "🎯 **Stretch Goal:** CSE Pilani (327 cutoff - you're close!)\n"
-                response += "🔄 **Smart Backup:** ECE/EEE at all campuses\n"
-                response += "💡 **MnC Option:** Math & Computing (₹26L avg, finance opportunities)\n\n"
-                response += "🎭 **Strategy:** Apply CSE everywhere, ECE as solid backup!"
+                response += "**GREAT SCORE - MULTIPLE EXCELLENT OPTIONS**\n\n"
+                response += "**ADMISSION PROBABILITY ANALYSIS**\n\n"
+                response += "| Branch | Campus | Cutoff 2024 | Your Score | Admission Chance | Risk Level |\n"
+                response += "|--------|--------|-------------|------------|------------------|------------|\n"
+                response += f"| CSE | Goa | 301 | {user_score} | 95% | Very Low |\n"
+                response += f"| CSE | Hyderabad | 298 | {user_score} | 98% | Very Low |\n"
+                response += f"| CSE | Pilani | 327 | {user_score} | 60% | Moderate |\n"
+                response += f"| ECE | Pilani | 314 | {user_score} | 100% | None |\n"
+                response += f"| ECE | Goa/Hyd | 287/284 | {user_score} | 100% | None |\n"
+                response += f"| MnC | Any | 318/295/293 | {user_score} | 100% | None |\n\n"
 
-            elif user_score >= 280:
-                response += "👍 **SOLID SCORE! Good engineering options:**\n"
-                response += "✅ **Safe:** ECE Goa/Hyd, EEE/Mechanical all campuses\n"
-                response += "🎯 **Stretch:** ECE Pilani, CSE Goa/Hyd\n"
-                response += "💡 **Smart Move:** Consider EEE - great scope!\n\n"
-                response += "🚀 **Reality:** Core branches have excellent opportunities too!"
+                response += "**PLACEMENT & CAREER PROSPECTS**\n\n"
+                response += "| Branch | Avg Package | Median | Highest | Top Companies | Career Growth |\n"
+                response += "|--------|-------------|--------|---------|---------------|---------------|\n"
+                response += "| CSE | ₹28L | ₹22L | ₹65L | Google, Microsoft, Amazon | Excellent |\n"
+                response += "| ECE | ₹24L | ₹18L | ₹55L | Intel, Qualcomm, Samsung | Very Good |\n"
+                response += "| MnC | ₹26L | ₹20L | ₹60L | Goldman Sachs, JP Morgan | Excellent |\n\n"
 
-            elif user_score >= 260:
-                response += "🎯 **DECENT SCORE! Core engineering awaits:**\n"
-                response += "✅ **Safe:** Mechanical/Chemical all campuses\n"
-                response += "🎯 **Possible:** EEE Goa/Hyd\n"
-                response += "💡 **Consider:** M.Sc programs (great for higher studies)\n\n"
-                response += "💪 **Truth Bomb:** Core branches = solid career foundation!"
+                response += "**STRATEGIC RECOMMENDATIONS:**\n"
+                response += "• **Primary Strategy:** Apply CSE at all campuses, ECE Pilani as guaranteed backup\n"
+                response += "• **Pilani CSE:** Achievable but competitive - you're 27 points above cutoff\n"
+                response += "• **Safe Choices:** CSE Goa/Hyd (very high probability), ECE Pilani (guaranteed)\n"
+                response += "• **Hidden Gem:** MnC if you're strong in math - finance sector loves this combo\n"
+                response += "• **Campus Decision:** Pilani (prestige) vs Goa (lifestyle) vs Hyderabad (modern)\n\n"
 
-            elif user_score >= 240:
-                response += "📚 **EXPLORE M.Sc PROGRAMS! Hidden gems:**\n"
-                response += "✅ **Excellent:** M.Sc Math, Physics, Chemistry\n"
-                response += "🎯 **Possible:** Chemical Engineering\n"
-                response += "💡 **Secret:** M.Sc → PhD → Research career!\n\n"
-                response += "🌟 **Plot Twist:** M.Sc students often outshine B.E. in placements!"
+            elif user_score >= 285:
+                response += "**SOLID SCORE - GOOD ENGINEERING OPTIONS**\n\n"
+                response += "**ADMISSION ANALYSIS BY BRANCH**\n\n"
+                response += "| Branch | Campus | Cutoff 2024 | Gap | Admission Chance | Recommendation |\n"
+                response += "|--------|--------|-------------|-----|------------------|----------------|\n"
+                response += f"| ECE | Goa | 287 | +{user_score-287} | 95% | Excellent choice |\n"
+                response += f"| ECE | Hyderabad | 284 | +{user_score-284} | 98% | Very safe option |\n"
+                response += f"| ECE | Pilani | 314 | {user_score-314} | 70% | Stretch but possible |\n"
+                response += "| EEE | All campuses | 292/278/275 | Positive | 100% | Guaranteed admission |\n"
+                response += "| ENI | All campuses | 282/270/270 | Positive | 100% | Emerging field |\n"
+                response += "| MnC | Goa/Hyd | 295/293 | {user_score-295} | 85% | High-reward option |\n\n"
+
+                response += "**CAREER PROSPECTS & PACKAGES**\n\n"
+                response += "| Branch | Industry Focus | Avg Package | Job Security | Growth Potential |\n"
+                response += "|--------|----------------|-------------|--------------|------------------|\n"
+                response += "| ECE | Hardware+Software | ₹24L | High | Excellent |\n"
+                response += "| EEE | Power & Electronics | ₹18L | Very High | Good |\n"
+                response += "| ENI | Automation & Control | ₹18L | High | Very Good |\n"
+                response += "| MnC | Finance+Tech | ₹26L | High | Excellent |\n\n"
+
+                response += "**STRATEGIC RECOMMENDATIONS:**\n"
+                response += "• **Primary Target:** ECE Goa/Hyd (high probability, excellent prospects)\n"
+                response += "• **Stretch Goal:** ECE Pilani (you're 29 points below, but trends vary)\n"
+                response += "• **Safe Backup:** EEE at any campus (guaranteed, underrated branch)\n"
+                response += "• **Unique Option:** ENI (instrumentation + IoT focus, growing demand)\n"
+                response += "• **High Reward:** MnC if math is your strength (finance sector premium)\n\n"
+
+            elif user_score >= 270:
+                response += "**DECENT SCORE - CORE ENGINEERING TERRITORY**\n\n"
+                response += "| Branch | Campus | Probability | Package Range | Industry Demand |\n"
+                response += "|--------|--------|-------------|---------------|----------------|\n"
+                response += "| EEE | All | 100% | ₹16-45L | Power sector, government jobs |\n"
+                response += "| Mechanical | All | 95% | ₹14-40L | Most versatile, evergreen demand |\n"
+                response += "| ENI | All | 100% | ₹18-40L | Process control, automation |\n"
+                response += "| Chemical | Goa/Hyd | 85% | ₹15-42L | Process industries, research |\n"
+                response += "| M.Sc Economics | All | 100% | ₹12-35L | Policy, consulting, analytics |\n\n"
+                response += "**STRATEGIC INSIGHTS:**\n"
+                response += "• Reality check: Core engineering branches are undervalued but solid\n"
+                response += "• EEE advantage: Government sector opportunities, PSU placements\n"
+                response += "• Mechanical truth: Most versatile branch, opportunities everywhere\n"
+                response += "• Chemical prospects: Specialized roles, higher packages in specific sectors\n"
+                response += "• M.Sc option: Economics is excellent for policy/consulting careers\n"
+                response += "• Long-term view: Core branches often have better job security\n\n"
+
+            elif user_score >= 250:
+                response += "**MODERATE SCORE - STRATEGIC CHOICES NEEDED**\n\n"
+                response += "| Branch | Campus | Probability | Package Range | Career Path |\n"
+                response += "|--------|--------|-------------|---------------|-------------|\n"
+                response += "| Mechanical | All | 90% | ₹14-40L | Manufacturing, automotive, aerospace |\n"
+                response += "| Chemical | All | 85% | ₹15-42L | Process industries, pharma, oil&gas |\n"
+                response += "| Civil | Pilani/Hyd | 95% | ₹12-35L | Infrastructure, construction, govt |\n"
+                response += "| M.Sc Math | All | 100% | ₹15-50L | Finance, data science, research |\n"
+                response += "| M.Sc Physics | All | 100% | ₹14-45L | Research, tech, academia |\n"
+                response += "| M.Sc Economics | All | 100% | ₹12-35L | Policy, consulting, banking |\n\n"
+                response += "**DETAILED GUIDANCE:**\n"
+                response += "• Engineering reality: Core branches offer solid, stable careers\n"
+                response += "• Mechanical advantage: Broadest scope, can work in any industry\n"
+                response += "• Chemical prospects: Specialized knowledge, good in process industries\n"
+                response += "• M.Sc surprise: Often better placement outcomes than expected\n"
+                response += "• Math M.Sc secret: Finance sector loves math graduates (₹15-50L range)\n"
+                response += "• Physics M.Sc path: Research → PhD → Academia or tech industry\n"
+                response += "• Economics M.Sc: Policy research, think tanks, consulting firms\n\n"
+
+            elif user_score >= 230:
+                response += "**CHALLENGING SCORE - M.Sc PROGRAMS SHINE**\n\n"
+                response += "| Program | Campus | Probability | Package Range | Career Trajectory |\n"
+                response += "|---------|--------|-------------|---------------|-------------------|\n"
+                response += "| M.Sc Mathematics | All | 100% | ₹15-50L | Finance, data science, quant roles |\n"
+                response += "| M.Sc Physics | All | 100% | ₹14-45L | Research, tech companies, academia |\n"
+                response += "| M.Sc Chemistry | All | 100% | ₹13-40L | Pharma, research, chemical industry |\n"
+                response += "| M.Sc Biology | All | 100% | ₹12-38L | Biotech, pharma, research |\n"
+                response += "| M.Sc Economics | All | 100% | ₹12-35L | Policy, consulting, banking |\n"
+                response += "| Pharmacy | Pilani/Hyd | 90% | ₹10-30L | Pharma industry, regulatory affairs |\n\n"
+                response += "**M.Sc PROGRAM INSIGHTS:**\n"
+                response += "• Hidden truth: M.Sc students often outperform B.E. in placements\n"
+                response += "• Mathematics advantage: Quant roles in finance (₹20-50L packages)\n"
+                response += "• Physics pathway: Research → tech companies → high packages\n"
+                response += "• Chemistry prospects: Pharma R&D, process development\n"
+                response += "• Biology future: Biotech boom, pharmaceutical research\n"
+                response += "• Economics scope: Policy research, economic consulting\n"
+                response += "• Dual degree option: M.Sc → M.E. (5-year integrated program)\n\n"
 
             else:
-                response += "🤔 **CHALLENGING SCORE, but don't lose hope:**\n"
-                response += "✅ **Consider:** M.Sc programs, Pharmacy\n"
-                response += "🎯 **Alternative:** Other good colleges (VIT, SRM)\n"
-                response += "💡 **Reality Check:** BITS might be tough this year\n\n"
-                response += "💪 **Remember:** Your worth isn't defined by one exam!"
+                response += "**BELOW 230 - ALTERNATIVE STRATEGIES**\n\n"
+                response += "| Option | Probability | Package Range | Strategic Advice |\n"
+                response += "|--------|-------------|---------------|------------------|\n"
+                response += "| M.Sc Programs | 70% | ₹10-35L | Still possible, worth trying |\n"
+                response += "| Pharmacy | 60% | ₹8-25L | Specialized field, decent prospects |\n"
+                response += "| Other Colleges | 100% | ₹8-30L | VIT, SRM, Manipal - good alternatives |\n"
+                response += "| Drop Year | - | Future potential | Prepare better, try again |\n\n"
+                response += "**REALISTIC ASSESSMENT:**\n"
+                response += "• BITS reality: Might be challenging with current score\n"
+                response += "• M.Sc option: Still worth applying, cutoffs can vary\n"
+                response += "• Alternative colleges: VIT, SRM, Manipal offer good programs\n"
+                response += "• Drop year consideration: If BITS is your dream, prepare better\n"
+                response += "• Important reminder: Success depends more on effort than college\n"
+                response += "• Career truth: Many successful people didn't go to top colleges\n\n"
 
         else:
             # General suggestions without score
@@ -2121,6 +2299,109 @@ class BITSATBot:
         response += "**Note:** Bot understands both English and Hinglish. Responds only to relevant BITSAT queries.\n\n"
         response += "---\n"
         response += "*Created by [u/Difficult-Dig7627](https://www.reddit.com/user/Difficult-Dig7627/) for r/bitsatards*"
+
+        return response
+
+    def _generate_chance_response(self, author, query):
+        """Generate admission chance response for specific branch and score"""
+        query_lower = query.lower()
+
+        # Extract score
+        import re
+        score_match = re.search(r'\b(\d{2,3})\b', query_lower)
+        user_score = int(score_match.group(1)) if score_match else None
+
+        if not user_score:
+            return f"Hey {author}, I couldn't find your score in the query. Please mention your BITSAT score!"
+
+        # Extract branch using the same detection as trends
+        detected_branch = self._detect_branch_for_trends(query_lower)
+
+        if not detected_branch:
+            return f"Hey {author}, I couldn't identify the branch you're asking about. Please mention a specific branch!"
+
+        # Get cutoff data
+        cutoff_data = self._get_cutoff_data()
+
+        greeting = self._get_random_greeting(author)
+        response = f"**{greeting}, here's your admission chance analysis:**\n\n"
+
+        # Branch display names
+        branch_names = {
+            'cse': 'Computer Science', 'ece': 'Electronics & Communication',
+            'eee': 'Electrical & Electronics', 'mechanical': 'Mechanical',
+            'chemical': 'Chemical', 'civil': 'Civil', 'mnc': 'Math & Computing',
+            'eni': 'Electronics & Instrumentation', 'manufacturing': 'Manufacturing',
+            'pharmacy': 'Pharmacy', 'biology': 'M.Sc Biology', 'physics': 'M.Sc Physics',
+            'chemistry': 'M.Sc Chemistry', 'mathematics': 'M.Sc Mathematics', 'economics': 'M.Sc Economics'
+        }
+
+        branch_name = branch_names.get(detected_branch, detected_branch.upper())
+        response += f"**ADMISSION CHANCES FOR {branch_name.upper()} WITH {user_score}/390**\n\n"
+
+        # Campus-wise analysis
+        response += "| Campus | 2024 Cutoff | Your Score | Gap | Admission Chance | Verdict |\n"
+        response += "|--------|-------------|------------|-----|------------------|----------|\n"
+
+        campuses = ['pilani', 'goa', 'hyderabad']
+        chances_found = False
+        best_gap = -999
+        best_campus = None
+
+        for campus in campuses:
+            cutoff = cutoff_data.get(campus, {}).get(detected_branch)
+            if cutoff:
+                chances_found = True
+                gap = user_score - cutoff
+
+                if gap > best_gap:
+                    best_gap = gap
+                    best_campus = campus
+
+                if gap >= 15:
+                    chance, verdict = "95%+", "Excellent"
+                elif gap >= 8:
+                    chance, verdict = "85-95%", "Very Good"
+                elif gap >= 3:
+                    chance, verdict = "70-85%", "Good"
+                elif gap >= 0:
+                    chance, verdict = "50-70%", "Possible"
+                elif gap >= -8:
+                    chance, verdict = "20-40%", "Challenging"
+                elif gap >= -15:
+                    chance, verdict = "5-15%", "Very Difficult"
+                else:
+                    chance, verdict = "<5%", "Extremely Difficult"
+
+                gap_str = f"+{gap}" if gap >= 0 else str(gap)
+                response += f"| {campus.title()} | {cutoff} | {user_score} | {gap_str} | {chance} | {verdict} |\n"
+
+        if not chances_found:
+            response += f"| - | Not offered | {user_score} | - | 0% | Not available |\n"
+            response += f"\n**{branch_name} is not offered at any BITS campus.**\n\n"
+            return response
+
+        # Overall assessment
+        response += f"\n**DETAILED ANALYSIS:**\n"
+
+        if best_gap >= 10:
+            response += f"• **Strong Position:** You're well above cutoffs, especially at {best_campus.title()} (+{best_gap} points)\n"
+            response += f"• **Strategy:** Apply confidently, you can choose based on campus preference\n"
+        elif best_gap >= 0:
+            response += f"• **Decent Position:** You're above cutoffs but margins are tight\n"
+            response += f"• **Strategy:** Apply but have backup branches ready\n"
+        elif best_gap >= -10:
+            response += f"• **Borderline Case:** You're close to cutoffs, outcome depends on competition\n"
+            response += f"• **Strategy:** Apply as stretch goal, focus on safer alternatives\n"
+        else:
+            response += f"• **Challenging Situation:** Significantly below last year's cutoffs\n"
+            response += f"• **Strategy:** Consider this unlikely, explore other options\n"
+
+        response += f"• **Reality Check:** Cutoffs can vary ±5-10 points based on paper difficulty and competition\n"
+        response += f"• **Important:** This analysis is based on 2024 data, actual results may differ\n\n"
+
+        # Add humorous ending
+        response += f"{self._get_random_humor('admission_ending')}"
 
         return response
 
