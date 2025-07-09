@@ -432,28 +432,39 @@ class BITSATBot:
         clean_text = self._clean_text_formatting(comment_text)
         text_lower = clean_text.lower().strip()
 
-        # Comparison patterns
+        # Comparison patterns - more comprehensive
         comparison_patterns = [
             'compare', 'comparison', 'vs', 'versus', 'difference between',
-            'better', 'which is better', 'cse vs ece', 'ece vs cse',
-            'mechanical vs chemical', 'difference', 'choose between'
+            'better', 'which is better', 'difference', 'choose between',
+            'pilani', 'goa', 'hyderabad', 'hyd'  # Campus names also indicate comparison
         ]
 
         # Must contain comparison pattern
         has_comparison = any(pattern in text_lower for pattern in comparison_patterns)
 
-        # Must mention at least two branches or ask for comparison
+        # Enhanced branch detection including campus-branch combinations
         branch_terms = [
             'cse', 'computer', 'ece', 'electronics', 'eee', 'electrical',
             'mechanical', 'mech', 'chemical', 'chem', 'civil', 'manufacturing',
             'mnc', 'math', 'mathematics', 'computing', 'eni', 'instrumentation',
-            'biology', 'bio', 'physics', 'chemistry', 'economics', 'pharmacy'
+            'biology', 'bio', 'physics', 'chemistry', 'economics', 'pharmacy', 'eco'
         ]
+
+        # Campus terms
+        campus_terms = ['pilani', 'goa', 'hyderabad', 'hyd']
 
         words = text_lower.split()
         branch_count = sum(1 for word in words if word in branch_terms)
+        campus_count = sum(1 for word in words if word in campus_terms)
 
-        return has_comparison and (branch_count >= 2 or 'which' in text_lower)
+        # It's a comparison if:
+        # 1. Has comparison keywords AND (multiple branches OR campus+branch combination)
+        # 2. OR has campus names with branches (like "pilani mech vs goa eco")
+        is_comparison = (has_comparison and (branch_count >= 2 or (campus_count >= 1 and branch_count >= 1))) or \
+                       (campus_count >= 2 and branch_count >= 2) or \
+                       ('vs' in text_lower and branch_count >= 2)
+
+        return is_comparison
 
     def _is_trend_query(self, comment_text):
         """Check if this is a trends/previous year query"""
@@ -1047,7 +1058,7 @@ class BITSATBot:
         return None
 
     def _generate_universal_branch_comparison(self, author, branches, placement_data, get_branch_info):
-        """Generate comparison for any two branches"""
+        """Generate detailed comparison for any two branches"""
         branch1, branch2 = branches
 
         # Get branch info
@@ -1058,54 +1069,98 @@ class BITSATBot:
         cutoff_data = self._get_cutoff_data()
 
         greeting = self._get_random_greeting(author)
-        response = f"🔥 **{greeting} here's {info1['name']} vs {info2['name']}:**\n\n"
+        response = f"**{greeting}, here's the {info1['name']} vs {info2['name']} breakdown:**\n\n"
 
-        # Branch 1 details
-        response += f"**{info1['emoji']} {info1['name'].upper()}:**\n"
-        response += f"• Focus: {info1['focus']}\n"
-        if branch1 in placement_data:
-            p1 = placement_data[branch1]
-            response += f"• Packages: Avg ₹{p1['avg']}L, Median ₹{p1['median']}L, Highest ₹{p1['highest']}L\n"
-            response += f"• Top Companies: {p1['top_companies']}\n"
+        # Create detailed comparison table
+        response += f"**COMPREHENSIVE COMPARISON**\n\n"
+        response += f"| Aspect | {info1['name']} | {info2['name']} |\n"
+        response += f"|--------|{'-' * len(info1['name'])}|{'-' * len(info2['name'])}|\n"
+        response += f"| **Focus Area** | {info1['focus']} | {info2['focus']} |\n"
 
-        # Show cutoffs across campuses
-        response += f"• Cutoffs: "
-        cutoffs1 = []
-        for campus in ['pilani', 'goa', 'hyderabad']:
-            cutoff = cutoff_data[campus].get(branch1, None)
-            if cutoff:
-                cutoffs1.append(f"{campus.title()} {cutoff}")
-        response += ", ".join(cutoffs1) + "\n\n"
-
-        # Branch 2 details
-        response += f"**{info2['emoji']} {info2['name'].upper()}:**\n"
-        response += f"• Focus: {info2['focus']}\n"
-        if branch2 in placement_data:
-            p2 = placement_data[branch2]
-            response += f"• Packages: Avg ₹{p2['avg']}L, Median ₹{p2['median']}L, Highest ₹{p2['highest']}L\n"
-            response += f"• Top Companies: {p2['top_companies']}\n"
-
-        # Show cutoffs across campuses
-        response += f"• Cutoffs: "
-        cutoffs2 = []
-        for campus in ['pilani', 'goa', 'hyderabad']:
-            cutoff = cutoff_data[campus].get(branch2, None)
-            if cutoff:
-                cutoffs2.append(f"{campus.title()} {cutoff}")
-        response += ", ".join(cutoffs2) + "\n\n"
-
-        # Analysis
+        # Placement comparison
         if branch1 in placement_data and branch2 in placement_data:
-            avg_diff = placement_data[branch1]['avg'] - placement_data[branch2]['avg']
-            if avg_diff > 0:
-                response += f"💰 **Package Analysis:** {info1['name']} has ₹{avg_diff}L higher average\n"
-            elif avg_diff < 0:
-                response += f"💰 **Package Analysis:** {info2['name']} has ₹{abs(avg_diff)}L higher average\n"
-            else:
-                response += f"💰 **Package Analysis:** Both have similar average packages\n"
+            p1, p2 = placement_data[branch1], placement_data[branch2]
+            response += f"| **Average Package** | ₹{p1['avg']}L | ₹{p2['avg']}L |\n"
+            response += f"| **Median Package** | ₹{p1['median']}L | ₹{p2['median']}L |\n"
+            response += f"| **Highest Package** | ₹{p1['highest']}L | ₹{p2['highest']}L |\n"
+            response += f"| **Top Recruiters** | {p1['top_companies']} | {p2['top_companies']} |\n"
+        elif branch1 in placement_data:
+            p1 = placement_data[branch1]
+            response += f"| **Average Package** | ₹{p1['avg']}L | Limited data |\n"
+            response += f"| **Top Recruiters** | {p1['top_companies']} | Varies by specialization |\n"
+        elif branch2 in placement_data:
+            p2 = placement_data[branch2]
+            response += f"| **Average Package** | Limited data | ₹{p2['avg']}L |\n"
+            response += f"| **Top Recruiters** | Varies by specialization | {p2['top_companies']} |\n"
 
-        # Add humorous ending
-        response += f"\n{self._get_random_humor('comparison_ending')}"
+        # Cutoff comparison across campuses
+        response += f"\n**CUTOFF COMPARISON (2024-25)**\n\n"
+        response += f"| Campus | {info1['name']} | {info2['name']} | Difference |\n"
+        response += f"|--------|{'-' * len(info1['name'])}|{'-' * len(info2['name'])}|----------|\n"
+
+        for campus in ['pilani', 'goa', 'hyderabad']:
+            cutoff1 = cutoff_data[campus].get(branch1, None)
+            cutoff2 = cutoff_data[campus].get(branch2, None)
+
+            if cutoff1 and cutoff2:
+                diff = cutoff1 - cutoff2
+                diff_str = f"+{diff}" if diff > 0 else str(diff)
+                response += f"| {campus.title()} | {cutoff1} | {cutoff2} | {diff_str} |\n"
+            elif cutoff1:
+                response += f"| {campus.title()} | {cutoff1} | Not offered | - |\n"
+            elif cutoff2:
+                response += f"| {campus.title()} | Not offered | {cutoff2} | - |\n"
+
+        # Detailed analysis
+        response += f"\n**ANALYSIS:**\n"
+
+        # Package analysis
+        if branch1 in placement_data and branch2 in placement_data:
+            p1, p2 = placement_data[branch1], placement_data[branch2]
+            avg_diff = p1['avg'] - p2['avg']
+            if avg_diff > 2:
+                response += f"• Package advantage: {info1['name']} leads by ₹{avg_diff}L average\n"
+            elif avg_diff < -2:
+                response += f"• Package advantage: {info2['name']} leads by ₹{abs(avg_diff)}L average\n"
+            else:
+                response += f"• Package parity: Both branches have similar placement outcomes\n"
+
+        # Cutoff analysis
+        avg_cutoffs = {}
+        for branch, branch_name in [(branch1, info1['name']), (branch2, info2['name'])]:
+            cutoffs = [cutoff_data[campus].get(branch) for campus in ['pilani', 'goa', 'hyderabad']]
+            valid_cutoffs = [c for c in cutoffs if c is not None]
+            if valid_cutoffs:
+                avg_cutoffs[branch_name] = sum(valid_cutoffs) / len(valid_cutoffs)
+
+        if len(avg_cutoffs) == 2:
+            names = list(avg_cutoffs.keys())
+            diff = avg_cutoffs[names[0]] - avg_cutoffs[names[1]]
+            if abs(diff) > 10:
+                higher = names[0] if diff > 0 else names[1]
+                response += f"• Competition: {higher} is significantly more competitive (avg {abs(diff):.0f} points higher)\n"
+            else:
+                response += f"• Competition: Both branches have similar competition levels\n"
+
+        # Career prospects
+        career_insights = {
+            'cse': 'Highest demand, remote work options, rapid industry growth',
+            'ece': 'Hardware+software versatility, good for higher studies, stable demand',
+            'eee': 'Core engineering, government opportunities, power sector focus',
+            'mechanical': 'Most versatile, evergreen demand, broad industry applications',
+            'chemical': 'Specialized roles, process industries, research opportunities',
+            'civil': 'Infrastructure focus, government projects, steady demand',
+            'mnc': 'Finance+tech combination, quantitative roles, emerging field'
+        }
+
+        if branch1 in career_insights:
+            response += f"• {info1['name']} prospects: {career_insights[branch1]}\n"
+        if branch2 in career_insights:
+            response += f"• {info2['name']} prospects: {career_insights[branch2]}\n"
+
+        # Final verdict with humor
+        response += f"\n**FINAL VERDICT:**\n"
+        response += f"{self._get_random_humor('comparison_ending')}"
 
         return response
 
@@ -1139,48 +1194,79 @@ class BITSATBot:
         return None
 
     def _detect_campus_branch_comparison(self, query):
-        """Detect cross-campus branch comparisons like 'goa cse vs pilani ece'"""
+        """Detect cross-campus branch comparisons like 'goa cse vs pilani ece' or 'pilani mech vs goa eco'"""
         # Campus patterns
         campuses = {
-            'pilani': ['pilani', 'bits pilani'],
-            'goa': ['goa', 'bits goa', 'k k birla goa'],
-            'hyderabad': ['hyderabad', 'hyd', 'bits hyderabad', 'bits hyd']
+            'pilani': ['pilani'],
+            'goa': ['goa'],
+            'hyderabad': ['hyderabad', 'hyd']
         }
 
-        # Branch patterns
+        # Enhanced branch patterns including abbreviations
         branches = {
-            'cse': ['cse', 'computer science', 'cs', 'computer'],
-            'ece': ['ece', 'electronics and communication', 'electronics'],
+            'cse': ['cse', 'computer science', 'computer'],
+            'ece': ['ece', 'electronics and communication', 'electronics', 'eco'],  # Added 'eco' for ECE
             'eee': ['eee', 'electrical and electronics', 'electrical'],
             'mechanical': ['mechanical', 'mech'],
             'chemical': ['chemical', 'chem'],
             'civil': ['civil'],
-            'mnc': ['mnc', 'math and computing', 'mathematics and computing']
+            'mnc': ['mnc', 'math and computing', 'mathematics and computing'],
+            'eni': ['eni', 'electronics and instrumentation', 'instrumentation'],
+            'manufacturing': ['manufacturing', 'manuf'],
+            'pharmacy': ['pharmacy', 'pharm'],
+            'biology': ['biology', 'bio', 'biological sciences'],
+            'physics': ['physics', 'phy'],
+            'chemistry': ['chemistry'],
+            'mathematics': ['mathematics', 'math', 'maths'],
+            'economics': ['economics', 'eco']  # Economics also uses 'eco'
         }
 
         # Look for patterns like "campus1 branch1 vs campus2 branch2"
-        words = query.split()
+        words = query.lower().split()
 
         # Find campus-branch combinations
         combinations = []
+
+        # Method 1: Look for adjacent campus-branch pairs
         for i, word in enumerate(words):
             for campus_key, campus_patterns in campuses.items():
-                if any(pattern in word for pattern in campus_patterns):
-                    # Look for branch nearby
-                    for j in range(max(0, i-2), min(len(words), i+3)):
-                        for branch_key, branch_patterns in branches.items():
-                            if any(pattern in words[j] for pattern in branch_patterns):
-                                combinations.append((campus_key, branch_key))
-                                break
+                if word in campus_patterns:
+                    # Look for branch in next few words
+                    for j in range(i+1, min(len(words), i+4)):
+                        if words[j] not in ['vs', 'versus', 'and', 'or', 'with']:
+                            for branch_key, branch_patterns in branches.items():
+                                if words[j] in branch_patterns:
+                                    combinations.append((campus_key, branch_key))
+                                    break
+                            break
+
+        # Method 2: Look for branch-campus pairs (reverse order)
+        for i, word in enumerate(words):
+            for branch_key, branch_patterns in branches.items():
+                if word in branch_patterns:
+                    # Look for campus in previous or next few words
+                    search_range = list(range(max(0, i-3), i)) + list(range(i+1, min(len(words), i+4)))
+                    for j in search_range:
+                        if words[j] not in ['vs', 'versus', 'and', 'or', 'with']:
+                            for campus_key, campus_patterns in campuses.items():
+                                if words[j] in campus_patterns:
+                                    combinations.append((campus_key, branch_key))
+                                    break
+
+        # Remove duplicates while preserving order
+        unique_combinations = []
+        for combo in combinations:
+            if combo not in unique_combinations:
+                unique_combinations.append(combo)
 
         # If we found 2 different combinations, it's a cross-campus comparison
-        if len(combinations) >= 2 and combinations[0] != combinations[1]:
-            return combinations[:2]
+        if len(unique_combinations) >= 2:
+            return unique_combinations[:2]
 
         return None
 
     def _generate_cross_campus_comparison(self, author, combinations, placement_data):
-        """Generate cross-campus branch comparison"""
+        """Generate detailed cross-campus branch comparison"""
         (campus1, branch1), (campus2, branch2) = combinations
 
         # Get cutoff data
@@ -1190,105 +1276,153 @@ class BITSATBot:
         cutoff1 = cutoff_data[campus1].get(branch1, 'N/A')
         cutoff2 = cutoff_data[campus2].get(branch2, 'N/A')
 
-        response = f"🔥 **{author.upper()}, here's {campus1.upper()} {branch1.upper()} vs {campus2.upper()} {branch2.upper()}:**\n\n"
+        greeting = self._get_random_greeting(author)
+        response = f"**{greeting}, here's the detailed comparison:**\n\n"
 
-        # Campus info
+        # Campus info with more details
         campus_info = {
-            'pilani': {'emoji': '🏛️', 'vibe': 'OG campus, traditional culture, harsh weather'},
-            'goa': {'emoji': '🏖️', 'vibe': 'Beach vibes, chill atmosphere, best weather'},
-            'hyderabad': {'emoji': '🏙️', 'vibe': 'Modern campus, tech city, growing connections'}
+            'pilani': {
+                'vibe': 'Original campus, traditional culture, extreme weather',
+                'pros': 'Highest prestige, strong alumni network, established reputation',
+                'cons': 'Harsh climate, conservative environment, highest competition'
+            },
+            'goa': {
+                'vibe': 'Beach campus, relaxed atmosphere, pleasant weather',
+                'pros': 'Best weather, chill vibe, good work-life balance',
+                'cons': 'Fewer industry connections, party reputation, limited research'
+            },
+            'hyderabad': {
+                'vibe': 'Modern campus, tech city advantages, growing reputation',
+                'pros': 'Tech hub location, modern facilities, industry proximity',
+                'cons': 'Newest campus, still building reputation, limited alumni network'
+            }
         }
 
-        # Option 1
-        response += f"**{campus_info[campus1]['emoji']} {campus1.upper()} {branch1.upper()}:**\n"
-        response += f"• Cutoff: **{cutoff1}/390**\n"
-        if branch1 in placement_data:
-            response += f"• Avg Package: ₹{placement_data[branch1]['avg']}L\n"
-            response += f"• Top Companies: {placement_data[branch1]['top_companies']}\n"
-        response += f"• Campus Vibe: {campus_info[campus1]['vibe']}\n\n"
+        # Detailed comparison table
+        response += f"**DETAILED COMPARISON TABLE**\n\n"
+        response += "| Aspect | " + f"{campus1.title()} {branch1.upper()}" + " | " + f"{campus2.title()} {branch2.upper()}" + " |\n"
+        response += "|--------|" + "-" * (len(campus1) + len(branch1) + 1) + "|" + "-" * (len(campus2) + len(branch2) + 1) + "|\n"
+        response += f"| **Cutoff 2024** | {cutoff1} | {cutoff2} |\n"
 
-        # Option 2
-        response += f"**{campus_info[campus2]['emoji']} {campus2.upper()} {branch2.upper()}:**\n"
-        response += f"• Cutoff: **{cutoff2}/390**\n"
-        if branch2 in placement_data:
-            response += f"• Avg Package: ₹{placement_data[branch2]['avg']}L\n"
-            response += f"• Top Companies: {placement_data[branch2]['top_companies']}\n"
-        response += f"• Campus Vibe: {campus_info[campus2]['vibe']}\n\n"
+        # Add placement data if available
+        if branch1 in placement_data and branch2 in placement_data:
+            p1, p2 = placement_data[branch1], placement_data[branch2]
+            response += f"| **Avg Package** | ₹{p1['avg']}L | ₹{p2['avg']}L |\n"
+            response += f"| **Highest Package** | ₹{p1['highest']}L | ₹{p2['highest']}L |\n"
+            response += f"| **Top Companies** | {p1['top_companies'][:30]}... | {p2['top_companies'][:30]}... |\n"
+        elif branch1 in placement_data:
+            p1 = placement_data[branch1]
+            response += f"| **Avg Package** | ₹{p1['avg']}L | Data not available |\n"
+        elif branch2 in placement_data:
+            p2 = placement_data[branch2]
+            response += f"| **Avg Package** | Data not available | ₹{p2['avg']}L |\n"
+
+        response += f"| **Campus Vibe** | {campus_info[campus1]['vibe']} | {campus_info[campus2]['vibe']} |\n"
+        response += f"| **Pros** | {campus_info[campus1]['pros']} | {campus_info[campus2]['pros']} |\n"
+        response += f"| **Cons** | {campus_info[campus1]['cons']} | {campus_info[campus2]['cons']} |\n"
 
         # Analysis
+        response += f"\n**ANALYSIS:**\n"
         if isinstance(cutoff1, int) and isinstance(cutoff2, int):
             diff = abs(cutoff1 - cutoff2)
             if cutoff1 > cutoff2:
-                response += f"📊 **Cutoff Analysis:** {campus1.upper()} {branch1.upper()} is {diff} points higher\n"
+                response += f"• Cutoff difference: {campus1.title()} {branch1.upper()} is {diff} points higher\n"
+                response += f"• Competition: {campus1.title()} {branch1.upper()} is more competitive\n"
             elif cutoff2 > cutoff1:
-                response += f"📊 **Cutoff Analysis:** {campus2.upper()} {branch2.upper()} is {diff} points higher\n"
+                response += f"• Cutoff difference: {campus2.title()} {branch2.upper()} is {diff} points higher\n"
+                response += f"• Competition: {campus2.title()} {branch2.upper()} is more competitive\n"
             else:
-                response += f"📊 **Cutoff Analysis:** Both have same cutoff!\n"
+                response += f"• Both have identical cutoffs - equally competitive\n"
 
-        # Verdict
-        humor_lines = [
-            "🎯 **Bottom Line:** Both are solid choices - pick based on your vibe preference!",
-            "🤔 **Reality Check:** Success depends more on you than the campus!",
-            "🎭 **Plot Twist:** You'll love whichever you choose after 4 years!",
-            "🚀 **Truth Bomb:** Alumni from both are killing it in their careers!"
-        ]
+        # Package comparison
+        if branch1 in placement_data and branch2 in placement_data:
+            p1, p2 = placement_data[branch1], placement_data[branch2]
+            if p1['avg'] > p2['avg']:
+                response += f"• Package advantage: {branch1.upper()} has ₹{p1['avg'] - p2['avg']}L higher average\n"
+            elif p2['avg'] > p1['avg']:
+                response += f"• Package advantage: {branch2.upper()} has ₹{p2['avg'] - p1['avg']}L higher average\n"
+            else:
+                response += f"• Both branches have similar placement packages\n"
 
-        import random
-        response += f"\n{random.choice(humor_lines)}"
+        # Final verdict with humor
+        response += f"\n**VERDICT:**\n"
+        response += f"{self._get_random_humor('comparison_ending')}"
 
         return response
 
     def _get_random_humor(self, category):
-        """Get random humorous lines for different categories"""
+        """Get random humorous lines for different categories - more unique and funny"""
         humor_bank = {
             'cutoff_ending': [
-                "Numbers don't define you - but they sure love to roast you! 💀",
-                "Remember: Your worth isn't measured in BITSAT points! 🌟",
-                "Plot twist: Work hard enough and cutoffs become irrelevant! 💪",
-                "These cutoffs are scarier than my coding assignments! 👻",
-                "Cutoffs are temporary, but the trauma is permanent! 😅",
-                "Fun fact: Every topper was once crying over cutoffs! 😭"
+                "Numbers don't define you, but they sure love to humble you daily.",
+                "Fun fact: Every BITS topper was once googling 'backup colleges' at 3 AM.",
+                "These cutoffs hit harder than reality after JEE results.",
+                "Cutoffs are like your ex - they keep rising when you least expect it.",
+                "Remember when 300 seemed impossible? Now it's barely enough for Civil.",
+                "BITSAT cutoffs: Making students question their life choices since 1964.",
+                "Plot twist: The real treasure was the anxiety we gained along the way.",
+                "Cutoffs rise faster than petrol prices and your parents' expectations."
             ],
             'comparison_ending': [
-                "Choose wisely - your future self will either thank you or haunt you! 👻",
-                "Both are great, but one might suit your vibe better! 🎭",
-                "Remember: It's not just about cutoffs, it's about passion! 🔥",
-                "Plot twist: Success depends more on you than the branch! 🌟",
-                "Either way, you'll be complaining about assignments in 6 months! 😂",
-                "Pro tip: Ask seniors, not Reddit bots! 🤖"
+                "Choose wisely - your future therapist will want to know why.",
+                "Both branches are great, but one will make you cry less during exams.",
+                "Pro tip: The branch doesn't matter if you're gonna bunk classes anyway.",
+                "Either way, you'll end up coding for a living. Welcome to reality.",
+                "Plot twist: Your branch choice matters less than your WiFi speed.",
+                "Remember: Every branch leads to the same destination - corporate slavery.",
+                "Fun fact: 90% of BITS students end up in IT regardless of branch.",
+                "Choose based on passion, not package. (Just kidding, choose package.)"
             ],
             'trend_ending': [
-                "Remember: Past performance doesn't guarantee future results! 📊",
-                "Cutoffs go up faster than your motivation during prep! 😅",
-                "Plot twist: Work hard enough and trends won't matter! 💪",
-                "These trends are scarier than horror movies! 👻",
-                "Moral: Start preparing now, not after seeing trends! 📚",
-                "Reality check: Trends change, but hard work never fails! 🔥"
+                "Past trends are like weather forecasts - mostly wrong but oddly specific.",
+                "These trends change faster than your study schedule during exams.",
+                "Cutoff trends: The only graph that always goes up (unlike your marks).",
+                "Moral of the story: Start preparing yesterday, panic today.",
+                "Trends show cutoffs rising, but your motivation keeps falling.",
+                "Reality check: By the time you analyze trends, cutoffs have already moved.",
+                "These numbers are more unpredictable than your mood during prep.",
+                "Cutoff trends: Making students lose sleep since the dawn of time."
             ],
             'suggestion_ending': [
-                "Remember: Success is 10% college, 90% your effort! 🌟",
-                "Your journey matters more than your destination! 🚀",
-                "Every BITS student has a success story - write yours! 💪",
-                "The best branch is the one that excites you every morning! ✨",
-                "Plot twist: You'll love whatever you choose after 4 years! 🎭",
-                "Reality: Alumni from all branches are killing it! 🔥"
+                "Success is 10% college, 90% surviving the mess food.",
+                "Your branch matters less than your ability to handle all-nighters.",
+                "Every BITS student has a story - most involve crying in the library.",
+                "The best branch is the one where you can still maintain your sanity.",
+                "Plot twist: You'll forget your branch name after the first semester.",
+                "Reality check: All branches lead to the same placement companies.",
+                "Remember: BITS changes you, not the other way around.",
+                "Fun fact: Your branch choice will be irrelevant in 5 years anyway."
+            ],
+            'admission_ending': [
+                "Admission chances are like the weather - unpredictable and disappointing.",
+                "Your score is decent, but BITSAT cutoffs have trust issues.",
+                "Remember: Hope for the best, prepare for disappointment.",
+                "Admission probability: Somewhere between 'maybe' and 'start praying'.",
+                "Your chances look good, but so did your JEE prep schedule.",
+                "Plot twist: Sometimes miracles happen, sometimes they don't.",
+                "Keep calm and have backup plans. Lots of backup plans.",
+                "Admission is like love - you never know until you try."
             ]
         }
 
         import random
-        return random.choice(humor_bank.get(category, ["Keep grinding! 💪"]))
+        return random.choice(humor_bank.get(category, ["Keep grinding, the struggle is real."]))
 
     def _get_random_greeting(self, author):
-        """Get random humorous greetings"""
+        """Get random humorous greetings with more personality"""
         greetings = [
-            f"Yo {author}!",
-            f"Arre {author}!",
-            f"Dekh {author},",
-            f"Bhai {author},",
-            f"Listen up {author}!",
-            f"Alright {author},",
-            f"Hey {author}!",
-            f"Sup {author}!"
+            f"Arre {author}",
+            f"Dekh {author}",
+            f"Bhai {author}",
+            f"Listen {author}",
+            f"Alright {author}",
+            f"Yaar {author}",
+            f"Buddy {author}",
+            f"Dude {author}",
+            f"Mate {author}",
+            f"Boss {author}",
+            f"Champ {author}",
+            f"Kiddo {author}"
         ]
 
         import random
@@ -1391,9 +1525,9 @@ class BITSATBot:
             if detected_campus and detected_campus in trend_data[detected_branch]:
                 # Specific campus trend
                 campus_data = trend_data[detected_branch][detected_campus]
-                response += f"**{detected_campus.upper()} CAMPUS - {detected_branch.upper()}:**\n\n"
-                response += "| Year | Cutoff | Change |\n"
-                response += "|------|--------|--------|\n"
+                response += f"**{detected_campus.upper()} - {detected_branch.upper()} CUTOFF TRENDS**\n\n"
+                response += "| Year | Cutoff | Change | Trend |\n"
+                response += "|------|--------|--------|-------|\n"
 
                 years = sorted(campus_data.keys(), reverse=True)
                 for i, year in enumerate(years):
@@ -1402,12 +1536,12 @@ class BITSATBot:
                         prev_cutoff = campus_data[years[i+1]]
                         change = cutoff - prev_cutoff
                         change_str = f"+{change}" if change > 0 else str(change)
-                        trend_emoji = "📈" if change > 0 else "📉" if change < 0 else "➡️"
+                        trend_desc = "Rising" if change > 0 else "Falling" if change < 0 else "Stable"
                     else:
                         change_str = "-"
-                        trend_emoji = ""
+                        trend_desc = "Baseline"
 
-                    response += f"| {year} | **{cutoff}** | {change_str} {trend_emoji} |\n"
+                    response += f"| {year} | {cutoff} | {change_str} | {trend_desc} |\n"
 
                 # Calculate trends and predictions (using available data)
                 if '2024' in campus_data and '2022' in campus_data and campus_data['2022'] is not None:
@@ -1714,13 +1848,13 @@ class BITSATBot:
 
             response += "\n"
 
-        # General query - show ALL branches from ALL campuses - TABLE FORMAT
+        # General query - show ALL branches from ALL campuses - CLEAN TABLE FORMAT
         else:
-            response += "**🎯 BITSAT 2024 COMPLETE CUTOFFS:**\n\n"
+            response += "**BITSAT 2024-25 CUTOFFS - ALL BRANCHES**\n\n"
 
-            # Create a comprehensive table for all campuses
-            response += "| Branch | 🏛️ Pilani | 🏖️ Goa | 🏙️ Hyderabad |\n"
-            response += "|--------|-----------|--------|-------------|\n"
+            # Create a clean comprehensive table
+            response += "| Branch | Pilani | Goa | Hyderabad | Type |\n"
+            response += "|--------|--------|-----|-----------|------|\n"
 
             # All branches with proper display names
             all_branches = [
@@ -1741,6 +1875,15 @@ class BITSATBot:
                 ('pharmacy', 'Pharmacy')
             ]
 
+            # Add program type to branches
+            branch_types = {
+                'computer science': 'B.E.', 'electronics and communication': 'B.E.', 'electrical and electronics': 'B.E.',
+                'mechanical': 'B.E.', 'chemical': 'B.E.', 'civil': 'B.E.', 'manufacturing': 'B.E.',
+                'mathematics and computing': 'B.E.', 'electronics and instrumentation': 'B.E.',
+                'biological sciences': 'M.Sc', 'chemistry msc': 'M.Sc', 'mathematics msc': 'M.Sc',
+                'economics': 'M.Sc', 'physics': 'M.Sc', 'pharmacy': 'B.Pharm'
+            }
+
             for branch_key, display_name in all_branches:
                 pilani_score = cutoff_data['pilani'].get(branch_key, '-')
                 goa_score = cutoff_data['goa'].get(branch_key, '-')
@@ -1748,11 +1891,13 @@ class BITSATBot:
 
                 # Only show row if at least one campus has this branch
                 if pilani_score != '-' or goa_score != '-' or hyd_score != '-':
-                    pilani_display = f"**{pilani_score}**" if pilani_score != '-' else '-'
-                    goa_display = f"**{goa_score}**" if goa_score != '-' else '-'
-                    hyd_display = f"**{hyd_score}**" if hyd_score != '-' else '-'
+                    # Clean format without excessive bold
+                    pilani_display = str(pilani_score) if pilani_score != '-' else '-'
+                    goa_display = str(goa_score) if goa_score != '-' else '-'
+                    hyd_display = str(hyd_score) if hyd_score != '-' else '-'
+                    program_type = branch_types.get(branch_key, 'B.E.')
 
-                    response += f"| {display_name} | {pilani_display} | {goa_display} | {hyd_display} |\n"
+                    response += f"| {display_name} | {pilani_display} | {goa_display} | {hyd_display} | {program_type} |\n"
 
             response += "\n*All scores are out of 390*\n\n"
 
@@ -1924,77 +2069,58 @@ class BITSATBot:
                     time.sleep(60)
 
     def _generate_help_response(self, author):
-        """Generate comprehensive help response"""
-        greeting = self._get_random_greeting(author)
+        """Generate comprehensive help response in clean table format"""
+        response = f"**BITSAT Bot Help Guide**\n\n"
 
-        response = f"🤖 **{greeting} Here's everything I can do for you:**\n\n"
+        response += "## **AVAILABLE FEATURES**\n\n"
+        response += "| Feature | Command/Query | Example |\n"
+        response += "|---------|---------------|----------|\n"
+        response += "| **Cutoff Queries** | `!cutoff [branch] [campus]` | `!cutoff cse pilani` |\n"
+        response += "| | Natural language | `goa mechanical cutoff` |\n"
+        response += "| **Branch Comparisons** | `compare [branch1] vs [branch2]` | `compare cse vs ece` |\n"
+        response += "| | Cross-campus | `goa cse vs pilani ece` |\n"
+        response += "| **Cutoff Trends** | `[branch] trends [campus]` | `cse trends pilani` |\n"
+        response += "| | Historical data | `mechanical previous year cutoffs` |\n"
+        response += "| **Smart Suggestions** | `suggest for [score] marks` | `suggest for 285 marks` |\n"
+        response += "| | Branch selection | `help me choose branch` |\n"
+        response += "| **Admission Queries** | `can i get [branch] with [score]` | `can i get cse with 310` |\n"
+        response += "| | Qualification check | `will i qualify for ece with 290` |\n\n"
 
-        response += "## **🎯 CUTOFF QUERIES**\n"
-        response += "**Commands:**\n"
-        response += "• `!cutoff` - Show all cutoffs\n"
-        response += "• `!cutoff [branch]` - e.g., `!cutoff cse`\n"
-        response += "• `!cutoff [campus]` - e.g., `!cutoff pilani`\n"
-        response += "• `!cutoff [branch] [campus]` - e.g., `!cutoff cse pilani`\n\n"
+        response += "## **SUPPORTED BRANCHES**\n\n"
+        response += "| Category | Branches |\n"
+        response += "|----------|----------|\n"
+        response += "| **Engineering** | CSE, ECE, EEE, Mechanical, Chemical, Civil, MnC, ENI, Manufacturing |\n"
+        response += "| **M.Sc Programs** | Mathematics, Physics, Chemistry, Biology, Economics |\n"
+        response += "| **Other** | Pharmacy |\n\n"
 
-        response += "**Natural Language:**\n"
-        response += "• *'goa cse cutoff'*, *'mechanical cutoff pilani'*\n"
-        response += "• *'what is the cutoff for ece'*\n"
-        response += "• *'pilani cutoffs'*, *'all cutoffs'*\n\n"
+        response += "## **SUPPORTED CAMPUSES**\n\n"
+        response += "| Campus | Location | Specialties |\n"
+        response += "|--------|----------|-------------|\n"
+        response += "| **Pilani** | Rajasthan | Original campus, highest cutoffs |\n"
+        response += "| **Goa** | Goa | Beach campus, moderate cutoffs |\n"
+        response += "| **Hyderabad** | Telangana | Modern campus, growing reputation |\n\n"
 
-        response += "## **🔥 BRANCH COMPARISONS**\n"
-        response += "**Any branch vs any branch:**\n"
-        response += "• *'compare cse vs ece'*\n"
-        response += "• *'mechanical vs chemical difference'*\n"
-        response += "• *'msc physics vs msc chemistry'*\n"
-        response += "• *'goa cse vs pilani ece'* (cross-campus!)\n\n"
+        response += "## **DATA ACCURACY**\n\n"
+        response += "| Data Type | Source | Years |\n"
+        response += "|-----------|--------|-------|\n"
+        response += "| **Cutoffs** | Official BITS website | 2024-25 |\n"
+        response += "| **Trends** | Historical BITS data | 2022-2024 |\n"
+        response += "| **Placements** | Industry reports | Recent data |\n"
+        response += "| **Predictions** | Statistical analysis | 2025 forecast |\n\n"
 
-        response += "## **📈 CUTOFF TRENDS**\n"
-        response += "**Historical data + 2025 predictions:**\n"
-        response += "• *'cse cutoff trends'*\n"
-        response += "• *'mechanical trends pilani'*\n"
-        response += "• *'msc physics previous year cutoffs'*\n"
-        response += "• *'pharmacy cutoff history'*\n\n"
+        response += "## **QUICK EXAMPLES**\n\n"
+        response += "| Query Type | Example Input |\n"
+        response += "|------------|---------------|\n"
+        response += "| Basic cutoff | `!cutoff cse` |\n"
+        response += "| Specific campus | `pilani ece cutoff` |\n"
+        response += "| Comparison | `mechanical vs chemical` |\n"
+        response += "| Trends | `cse cutoff trends` |\n"
+        response += "| Suggestions | `suggest for 295 marks` |\n"
+        response += "| Admission check | `can i get ece with 285` |\n\n"
 
-        response += "## **🎯 SMART SUGGESTIONS**\n"
-        response += "**Score-based advice:**\n"
-        response += "• *'suggest branches for 285 marks'*\n"
-        response += "• *'help me choose branch'*\n"
-        response += "• *'which campus should I choose'*\n"
-        response += "• *'confused about branch selection'*\n\n"
-
-        response += "## **🤔 ADMISSION QUERIES**\n"
-        response += "**Reverse cutoff lookup:**\n"
-        response += "• *'can I get cse with 310 marks'*\n"
-        response += "• *'will I qualify for ece with 290'*\n"
-        response += "• *'chances of getting mechanical with 270'*\n\n"
-
-        response += "## **📊 SUPPORTED BRANCHES**\n"
-        response += "**🔧 Engineering:** CSE, ECE, EEE, Mechanical, Chemical, Civil, MnC, ENI, Manufacturing\n"
-        response += "**🧬 M.Sc Programs:** Math, Physics, Chemistry, Biology, Economics\n"
-        response += "**💊 Other:** Pharmacy\n\n"
-
-        response += "## **🏫 SUPPORTED CAMPUSES**\n"
-        response += "**🏛️ Pilani** • **🏖️ Goa** • **🏙️ Hyderabad**\n\n"
-
-        response += "## **💡 PRO TIPS**\n"
-        response += "• All data is **2024-25 official** from BITS website\n"
-        response += "• Trends use **real 2022-2024** historical data\n"
-        response += "• Comparisons include **placement packages**\n"
-        response += "• I understand **Hinglish** and casual language\n"
-        response += "• I only respond to **relevant queries** (no spam)\n\n"
-
-        response += "## **🚀 EXAMPLES**\n"
-        response += "```\n"
-        response += "!cutoff cse\n"
-        response += "goa mechanical cutoff kya hai?\n"
-        response += "compare cse vs ece\n"
-        response += "cse trends pilani\n"
-        response += "suggest for 295 marks\n"
-        response += "can i get ece with 285?\n"
-        response += "```\n\n"
-
-        response += f"**🎭 {self._get_random_humor('suggestion_ending')}**\n\n"
-        response += "*Made with ❤️ for r/bitsatards by No_Attendance_Bot*"
+        response += "**Note:** Bot understands both English and Hinglish. Responds only to relevant BITSAT queries.\n\n"
+        response += "---\n"
+        response += "*Created by [u/Difficult-Dig7627](https://www.reddit.com/user/Difficult-Dig7627/) for r/bitsatards*"
 
         return response
 
