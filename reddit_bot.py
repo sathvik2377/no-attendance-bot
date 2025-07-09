@@ -111,27 +111,27 @@ class BITSATBot:
             # Test authentication
             logger.info("Testing authentication...")
             user = self.reddit.user.me()
-            logger.info(f"✅ Authenticated as: {user}")
+            logger.info(f"Authenticated as: {user}")
 
             # Test subreddit access
             logger.info("Testing subreddit access...")
             self.subreddit = self.reddit.subreddit('bitsatards')
-            logger.info(f"✅ Connected to r/{self.subreddit.display_name}")
+            logger.info(f"Connected to r/{self.subreddit.display_name}")
 
             return True
 
         except Exception as e:
             error_msg = str(e).lower()
             if "403" in error_msg or "forbidden" in error_msg:
-                logger.error("❌ 403 FORBIDDEN - Possible causes:")
+                logger.error("403 FORBIDDEN - Possible causes:")
                 logger.error("   • Wrong username/password")
                 logger.error("   • Account suspended/banned")
                 logger.error("   • Two-factor authentication enabled")
                 logger.error("   • Rate limited")
             elif "401" in error_msg or "unauthorized" in error_msg:
-                logger.error("❌ 401 UNAUTHORIZED - Check client_id/client_secret")
+                logger.error("401 UNAUTHORIZED - Check client_id/client_secret")
             else:
-                logger.error(f"❌ Authentication failed: {e}")
+                logger.error(f"Authentication failed: {e}")
 
             logger.error("Failed to authenticate. Please check your credentials.")
             return False
@@ -597,31 +597,31 @@ class BITSATBot:
         ending = random.choice(self.cool_endings)
         wisdom = random.choice(self.dark_wisdom)
 
-        # Different response patterns for variety
+        # Different response patterns for variety - no emojis, more natural
         patterns = [
             # Pattern 1: Direct address with dark motivation
-            f"{starter} {author}, {vibe} {motivation} but remember - {wisdom}. {ending.capitalize()} 💀✨",
+            f"{starter} {author}, {vibe} {motivation} but remember - {wisdom}. {ending.capitalize()}.",
 
             # Pattern 2: Comment-specific with wisdom
-            f"Yo {author}! {vibe} this is just {motivation}. Here's the thing - {wisdom}. {ending.capitalize()} 🔥",
+            f"Yo {author}! {vibe} this is just {motivation}. Here's the thing - {wisdom}. {ending.capitalize()}.",
 
             # Pattern 3: Hinglish mix with motivation
-            f"{starter}, {vibe} life threw you this curveball? {motivation.capitalize()} hai yaar. But {wisdom} - {ending} 💪😈",
+            f"{starter}, {vibe} life threw you this curveball? {motivation.capitalize()} hai yaar. But {wisdom} - {ending}.",
 
             # Pattern 4: Cool philosophical
-            f"Dekh {author}, {vibe} {motivation} is happening. Real talk - {wisdom}. Time to {ending} 🎯",
+            f"Dekh {author}, {vibe} {motivation} is happening. Real talk - {wisdom}. Time to {ending}.",
 
             # Pattern 5: Sarcastic motivation
-            f"{starter} {author}, {motivation}? {vibe} perfect timing. Remember: {wisdom}. Now {ending} 🚀💀"
+            f"{starter} {author}, {motivation}? {vibe} perfect timing. Remember: {wisdom}. Now {ending}."
         ]
 
         # Add comment-specific elements if available
         if meaningful_words:
             word = random.choice(meaningful_words)
             specific_patterns = [
-                f"{starter} {author}, {vibe} {word} is giving you {motivation}? Plot twist: {wisdom}. {ending.capitalize()} 🎭",
-                f"Yo {author}! {word} se {motivation}? {vibe} {wisdom} - {ending} 💯",
-                f"{starter}, {word} and {motivation} - {vibe} classic combo. But {wisdom}, so {ending} 🔥💀"
+                f"{starter} {author}, {vibe} {word} is giving you {motivation}? Plot twist: {wisdom}. {ending.capitalize()}.",
+                f"Yo {author}! {word} se {motivation}? {vibe} {wisdom} - {ending}.",
+                f"{starter}, {word} and {motivation} - {vibe} classic combo. But {wisdom}, so {ending}."
             ]
             patterns.extend(specific_patterns)
 
@@ -793,7 +793,7 @@ class BITSATBot:
         # Extract score from query
         score_match = re.search(r'\b(\d{2,3})\b', clean_query)
         if not score_match:
-            return "Bro, mention your score! How can I predict without knowing your marks? 🤔"
+            return "Bro, mention your score! How can I predict without knowing your marks?"
 
         user_score = int(score_match.group(1))
         query = clean_query.lower()
@@ -936,44 +936,42 @@ class BITSATBot:
             # Specific branch + campus
             required_score = cutoff_data[specific_campus].get(specific_branch, None)
             if required_score is None:
-                return f"Sorry {author}, {specific_branch.upper()} is not available at {specific_campus.upper()} campus! 😅"
-
-            campus_emoji = {'pilani': '🏛️', 'goa': '🏖️', 'hyderabad': '🏙️'}[specific_campus]
+                return f"Sorry {author}, {specific_branch.upper()} is not available at {specific_campus.upper()} campus."
 
             if user_score >= required_score:
                 margin = user_score - required_score
-                response = f"🎉 **GOOD NEWS {author.upper()}!**\n\n"
-                response += f"✅ **YES, you can get {specific_branch.upper()} at {specific_campus.upper()}!**\n\n"
+                response = f"**GOOD NEWS {author.upper()}!**\n\n"
+                response += f"**YES, you can get {specific_branch.upper()} at {specific_campus.upper()}!**\n\n"
                 response += f"| Your Score | Required | Status | Margin |\n"
                 response += f"|------------|----------|--------|--------|\n"
-                response += f"| **{user_score}/390** | **{required_score}/390** | ✅ **SAFE** | +{margin} |\n\n"
-                response += f"{campus_emoji} **{specific_campus.upper()} CAMPUS** - {specific_branch.upper()}\n\n"
+                response += f"| **{user_score}/390** | **{required_score}/390** | **SAFE** | +{margin} |\n\n"
+                response += f"**{specific_campus.upper()} CAMPUS** - {specific_branch.upper()}\n\n"
                 if margin >= 20:
-                    response += "🔥 **EXCELLENT!** You're well above the cutoff! Time to celebrate! 🎊"
+                    response += "**EXCELLENT!** You're well above the cutoff! Time to celebrate!"
                 elif margin >= 10:
-                    response += "👍 **GOOD!** You're comfortably above the cutoff! 😊"
+                    response += "**GOOD!** You're comfortably above the cutoff!"
                 else:
-                    response += "⚠️ **CLOSE CALL!** You're just above the cutoff. Fingers crossed! 🤞"
+                    response += "**CLOSE CALL!** You're just above the cutoff. Fingers crossed!"
             else:
                 deficit = required_score - user_score
-                response = f"😔 **TOUGH NEWS {author.upper()}...**\n\n"
-                response += f"❌ **Sorry, {specific_branch.upper()} at {specific_campus.upper()} might be tough...**\n\n"
+                response = f"**TOUGH NEWS {author.upper()}...**\n\n"
+                response += f"**Sorry, {specific_branch.upper()} at {specific_campus.upper()} might be tough...**\n\n"
                 response += f"| Your Score | Required | Status | Gap |\n"
                 response += f"|------------|----------|--------|-----|\n"
-                response += f"| **{user_score}/390** | **{required_score}/390** | ❌ **SHORT** | -{deficit} |\n\n"
-                response += f"💡 **ALTERNATIVES:**\n"
+                response += f"| **{user_score}/390** | **{required_score}/390** | **SHORT** | -{deficit} |\n\n"
+                response += f"**ALTERNATIVES:**\n"
                 response += f"• Try other campuses for {specific_branch.upper()}\n"
                 response += f"• Consider other branches at {specific_campus.upper()}\n"
                 response += f"• Look into M.Sc programs (lower cutoffs)\n\n"
-                response += "Don't lose hope! There are always options! 💪"
+                response += "Don't lose hope! There are always options!"
 
         elif specific_branch:
             # Specific branch, all campuses
-            response = f"🎯 **{author.upper()}, here's your {specific_branch.upper()} admission chances:**\n\n"
+            response = f"**{author.upper()}, here's your {specific_branch.upper()} admission chances:**\n\n"
             response += f"| Campus | Required | Your Score | Status |\n"
             response += f"|--------|----------|------------|--------|\n"
 
-            campus_names = {'pilani': '🏛️ Pilani', 'goa': '🏖️ Goa', 'hyderabad': '🏙️ Hyderabad'}
+            campus_names = {'pilani': 'Pilani', 'goa': 'Goa', 'hyderabad': 'Hyderabad'}
             safe_campuses = []
             risky_campuses = []
 
@@ -981,22 +979,22 @@ class BITSATBot:
                 required = cutoff_data[campus].get(specific_branch, None)
                 if required:
                     if user_score >= required:
-                        status = "✅ SAFE"
+                        status = "SAFE"
                         safe_campuses.append(campus)
                     else:
-                        status = f"❌ SHORT (-{required - user_score})"
+                        status = f"SHORT (-{required - user_score})"
                         risky_campuses.append(campus)
                     response += f"| {campus_names[campus]} | **{required}/390** | **{user_score}/390** | {status} |\n"
 
             response += "\n"
             if safe_campuses:
-                response += f"🎉 **GOOD NEWS!** You can get {specific_branch.upper()} at: {', '.join(safe_campuses).upper()}\n"
+                response += f"**GOOD NEWS!** You can get {specific_branch.upper()} at: {', '.join(safe_campuses).upper()}\n"
             if risky_campuses:
-                response += f"😬 **TOUGH LUCK** for: {', '.join(risky_campuses).upper()}\n"
+                response += f"**TOUGH LUCK** for: {', '.join(risky_campuses).upper()}\n"
 
         else:
             # General admission chances
-            response = f"🎯 **{author.upper()}, here are your overall admission chances with {user_score}/390:**\n\n"
+            response = f"**{author.upper()}, here are your overall admission chances with {user_score}/390:**\n\n"
             response += "**SAFE OPTIONS:**\n"
 
             safe_options = []
@@ -1014,10 +1012,10 @@ class BITSATBot:
 
         # Add motivational ending
         motivational_endings = [
-            "\n\n🌟 Remember: Your worth isn't defined by cutoffs! Keep pushing! 💪",
-            "\n\n🎯 Focus on what you can control - your preparation and attitude! 🔥",
-            "\n\n💡 Every rejection is a redirection to something better! Stay strong! ✨",
-            "\n\n🚀 Success isn't about the college, it's about what you do there! 🌟"
+            "\n\nRemember: Your worth isn't defined by cutoffs! Keep pushing!",
+            "\n\nFocus on what you can control - your preparation and attitude!",
+            "\n\nEvery rejection is a redirection to something better! Stay strong!",
+            "\n\nSuccess isn't about the college, it's about what you do there!"
         ]
 
         import random
@@ -1043,23 +1041,23 @@ class BITSATBot:
         # Get comprehensive branch info for any comparison
         def get_branch_info(branch_key):
             branch_descriptions = {
-                'cse': {'name': 'Computer Science', 'focus': 'Software, AI/ML, algorithms', 'emoji': '💻'},
-                'ece': {'name': 'Electronics & Communication', 'focus': 'Hardware+Software, VLSI, embedded', 'emoji': '⚡'},
-                'eee': {'name': 'Electrical & Electronics', 'focus': 'Power systems, electrical machines', 'emoji': '🔌'},
-                'mechanical': {'name': 'Mechanical', 'focus': 'Automotive, aerospace, manufacturing', 'emoji': '🔧'},
-                'chemical': {'name': 'Chemical', 'focus': 'Process industries, pharma, petrochemicals', 'emoji': '⚗️'},
-                'civil': {'name': 'Civil', 'focus': 'Construction, infrastructure, urban planning', 'emoji': '🏗️'},
-                'mnc': {'name': 'Math & Computing', 'focus': 'Mathematics, programming, finance', 'emoji': '🧮'},
-                'eni': {'name': 'Electronics & Instrumentation', 'focus': 'Process control, automation, IoT', 'emoji': '🎛️'},
-                'manufacturing': {'name': 'Manufacturing', 'focus': 'Production, industrial engineering', 'emoji': '🏭'},
-                'pharmacy': {'name': 'Pharmacy', 'focus': 'Drug development, pharmaceutical industry', 'emoji': '💊'},
-                'biology': {'name': 'M.Sc Biology', 'focus': 'Life sciences, research, biotechnology', 'emoji': '🧬'},
-                'physics': {'name': 'M.Sc Physics', 'focus': 'Research, academia, tech applications', 'emoji': '⚛️'},
-                'chemistry': {'name': 'M.Sc Chemistry', 'focus': 'Research, chemical industry, academia', 'emoji': '🧪'},
-                'mathematics': {'name': 'M.Sc Mathematics', 'focus': 'Research, finance, data science', 'emoji': '📊'},
-                'economics': {'name': 'M.Sc Economics', 'focus': 'Policy, consulting, financial analysis', 'emoji': '📈'}
+                'cse': {'name': 'Computer Science', 'focus': 'Software, AI/ML, algorithms'},
+                'ece': {'name': 'Electronics & Communication', 'focus': 'Hardware+Software, VLSI, embedded'},
+                'eee': {'name': 'Electrical & Electronics', 'focus': 'Power systems, electrical machines'},
+                'mechanical': {'name': 'Mechanical', 'focus': 'Automotive, aerospace, manufacturing'},
+                'chemical': {'name': 'Chemical', 'focus': 'Process industries, pharma, petrochemicals'},
+                'civil': {'name': 'Civil', 'focus': 'Construction, infrastructure, urban planning'},
+                'mnc': {'name': 'Math & Computing', 'focus': 'Mathematics, programming, finance'},
+                'eni': {'name': 'Electronics & Instrumentation', 'focus': 'Process control, automation, IoT'},
+                'manufacturing': {'name': 'Manufacturing', 'focus': 'Production, industrial engineering'},
+                'pharmacy': {'name': 'Pharmacy', 'focus': 'Drug development, pharmaceutical industry'},
+                'biology': {'name': 'M.Sc Biology', 'focus': 'Life sciences, research, biotechnology'},
+                'physics': {'name': 'M.Sc Physics', 'focus': 'Research, academia, tech applications'},
+                'chemistry': {'name': 'M.Sc Chemistry', 'focus': 'Research, chemical industry, academia'},
+                'mathematics': {'name': 'M.Sc Mathematics', 'focus': 'Research, finance, data science'},
+                'economics': {'name': 'M.Sc Economics', 'focus': 'Policy, consulting, financial analysis'}
             }
-            return branch_descriptions.get(branch_key, {'name': branch_key.upper(), 'focus': 'Engineering/Science', 'emoji': '🎓'})
+            return branch_descriptions.get(branch_key, {'name': branch_key.upper(), 'focus': 'Engineering/Science'})
 
         # First check for cross-campus comparisons (e.g., "goa cse vs pilani ece")
         campus_branch_pattern = self._detect_campus_branch_comparison(query_lower)
@@ -1072,7 +1070,7 @@ class BITSATBot:
             return self._generate_universal_branch_comparison(author, detected_branches, placement_data, get_branch_info)
 
         # If no specific comparison detected, show generic help
-        response = f"Hey {author}! 🤔 I can compare ANY branches for you:\n\n"
+        response = f"Hey {author}! I can compare ANY branches for you:\n\n"
         response += "**Engineering Branches:**\n"
         response += "• CSE, ECE, EEE, Mechanical, Chemical, Civil, MnC, ENI\n\n"
         response += "**M.Sc Programs:**\n"
@@ -1081,7 +1079,7 @@ class BITSATBot:
         response += "• *'compare CSE vs ECE'*\n"
         response += "• *'mechanical vs chemical difference'*\n"
         response += "• *'goa cse vs pilani ece'* (cross-campus!)\n\n"
-        response += "Pro tip: The best branch is the one that excites you! 🚀"
+        response += "Pro tip: The best branch is the one that excites you!"
 
         return response
 
@@ -1584,7 +1582,7 @@ class BITSATBot:
             detected_campus = 'hyderabad'
 
         if detected_branch and detected_branch in trend_data:
-            response = f"📈 **{author.upper()}, here are the {detected_branch.upper()} cutoff trends:**\n\n"
+            response = f"**{author.upper()}, here are the {detected_branch.upper()} cutoff trends:**\n\n"
 
             if detected_campus and detected_campus in trend_data[detected_branch]:
                 # Specific campus trend
@@ -1643,18 +1641,18 @@ class BITSATBot:
                 if '2024' in campus_data and '2022' in campus_data and campus_data['2022'] is not None:
                     two_year_change = campus_data['2024'] - campus_data['2022']
                     avg_change = two_year_change / 2
-                    response += f"\n📊 **2-Year Trend (2022-2024):** +{two_year_change} points ({avg_change:.1f}/year average)\n"
+                    response += f"\n**2-Year Trend (2022-2024):** +{two_year_change} points ({avg_change:.1f}/year average)\n"
 
                     # 2025 Prediction based on recent trend
                     predicted_2025 = campus_data['2024'] + int(avg_change)
-                    response += f"🔮 **2025 Prediction:** ~{predicted_2025} (±5 points)\n"
+                    response += f"**2025 Prediction:** ~{predicted_2025} (±5 points)\n"
                 elif '2024' in campus_data and '2023' in campus_data and campus_data['2023'] is not None:
                     one_year_change = campus_data['2024'] - campus_data['2023']
-                    response += f"\n📊 **1-Year Change (2023-2024):** {one_year_change:+d} points\n"
+                    response += f"\n**1-Year Change (2023-2024):** {one_year_change:+d} points\n"
 
                     # Conservative prediction
                     predicted_2025 = campus_data['2024'] + one_year_change
-                    response += f"🔮 **2025 Prediction:** ~{predicted_2025} (±7 points)\n"
+                    response += f"**2025 Prediction:** ~{predicted_2025} (±7 points)\n"
 
             else:
                 # All campuses trend
@@ -1666,47 +1664,47 @@ class BITSATBot:
                         if '2022' in campus_data and campus_data['2022'] is not None:
                             old = campus_data['2022']
                             change = current - old
-                            response += f"🏛️ **{campus.upper()}:** {old} → {current} (+{change} in 2 years)\n"
+                            response += f"**{campus.upper()}:** {old} → {current} (+{change} in 2 years)\n"
                         elif '2023' in campus_data and campus_data['2023'] is not None:
                             old = campus_data['2023']
                             change = current - old
-                            response += f"🏛️ **{campus.upper()}:** {old} → {current} ({change:+d} in 1 year)\n"
+                            response += f"**{campus.upper()}:** {old} → {current} ({change:+d} in 1 year)\n"
                         else:
-                            response += f"🏛️ **{campus.upper()}:** {current} (2024 data)\n"
+                            response += f"**{campus.upper()}:** {current} (2024 data)\n"
 
-                response += f"\n📈 **Overall Pattern:** Most branches rising 3-15 points per year\n"
+                response += f"\n**Overall Pattern:** Most branches rising 3-15 points per year\n"
 
             # Add prediction
-            response += f"\n🔮 **2025 Prediction:** Expect 3-8 point increase based on recent trends\n"
-            response += f"⚠️ **Reality Check:** Trends can change based on difficulty & applications!\n\n"
+            response += f"\n**2025 Prediction:** Expect 3-8 point increase based on recent trends\n"
+            response += f"**Reality Check:** Trends can change based on difficulty & applications!\n\n"
 
             # Add humor
             humor_lines = [
-                "Remember: Past performance doesn't guarantee future results! 📊",
-                "Cutoffs go up faster than your motivation during prep! 😅",
-                "Plot twist: Work hard enough and trends won't matter! 💪",
-                "These trends are scarier than horror movies! 👻"
+                "Remember: Past performance doesn't guarantee future results!",
+                "Cutoffs go up faster than your motivation during prep!",
+                "Plot twist: Work hard enough and trends won't matter!",
+                "These trends are scarier than horror movies!"
             ]
             import random
             response += random.choice(humor_lines)
 
         else:
             # Comprehensive trend response showing all available branches
-            response = f"📈 **{author}, I can show cutoff trends for ALL branches:**\n\n"
-            response += "**🔥 High-Demand Branches:**\n"
+            response = f"**{author}, I can show cutoff trends for ALL branches:**\n\n"
+            response += "**High-Demand Branches:**\n"
             response += "• CSE, ECE, EEE, MnC (Math & Computing)\n\n"
-            response += "**⚙️ Core Engineering:**\n"
+            response += "**Core Engineering:**\n"
             response += "• Mechanical, Chemical, Civil, ENI, Manufacturing\n\n"
-            response += "**🧬 M.Sc Programs:**\n"
+            response += "**M.Sc Programs:**\n"
             response += "• Mathematics, Physics, Chemistry, Biology, Economics\n\n"
-            response += "**💊 Other Programs:**\n"
+            response += "**Other Programs:**\n"
             response += "• Pharmacy\n\n"
             response += "**Usage Examples:**\n"
             response += "• *'CSE cutoff trends'* - for all campuses\n"
             response += "• *'Mechanical trends pilani'* - for specific campus\n"
             response += "• *'M.Sc Physics previous year cutoffs'*\n\n"
-            response += "📊 **General Trend:** Most cutoffs rising 4-7 points annually!\n"
-            response += "🔮 **2025 Prediction:** Expect continued upward trend!"
+            response += "**General Trend:** Most cutoffs rising 4-7 points annually!\n"
+            response += "**2025 Prediction:** Expect continued upward trend!"
 
         return response
 
@@ -1878,51 +1876,51 @@ class BITSATBot:
         else:
             # General suggestions without score
             if 'branch' in query_lower or 'choose' in query_lower:
-                response = f"🤔 **{author}, here's how to choose the right branch:**\n\n"
-                response += "**🔥 High Demand (Competitive):**\n"
+                response = f"**{author}, here's how to choose the right branch:**\n\n"
+                response += "**High Demand (Competitive):**\n"
                 response += "• CSE: Software, tech companies, highest packages\n"
                 response += "• ECE: Hardware + software, versatile\n\n"
-                response += "**⚡ Core Engineering (Stable):**\n"
+                response += "**Core Engineering (Stable):**\n"
                 response += "• Mechanical: Broad applications, evergreen\n"
                 response += "• EEE: Power sector, government jobs\n"
                 response += "• Chemical: Process industries, good packages\n\n"
-                response += "**📚 M.Sc Programs (Underrated):**\n"
+                response += "**M.Sc Programs (Underrated):**\n"
                 response += "• Math/Physics: Research, academia, finance\n"
                 response += "• Economics: Policy, consulting, analytics\n\n"
-                response += "💡 **Golden Rule:** Choose based on interest, not just cutoffs!"
+                response += "**Golden Rule:** Choose based on interest, not just cutoffs!"
 
             elif 'campus' in query_lower:
-                response = f"🏫 **{author}, here's the campus breakdown:**\n\n"
-                response += "**🏛️ PILANI (The OG):**\n"
+                response = f"**{author}, here's the campus breakdown:**\n\n"
+                response += "**PILANI (The OG):**\n"
                 response += "• Prestige factor, alumni network\n"
                 response += "• Traditional campus culture\n"
                 response += "• Harsh weather (extreme hot/cold)\n\n"
-                response += "**🏖️ GOA (The Chill):**\n"
+                response += "**GOA (The Chill):**\n"
                 response += "• Best weather, beach vibes\n"
                 response += "• Relaxed atmosphere\n"
                 response += "• Great for work-life balance\n\n"
-                response += "**🏙️ HYDERABAD (The Modern):**\n"
+                response += "**HYDERABAD (The Modern):**\n"
                 response += "• Newest campus, modern facilities\n"
                 response += "• Tech city advantages\n"
                 response += "• Growing industry connections\n\n"
-                response += "🎯 **Truth:** All campuses have excellent academics!"
+                response += "**Truth:** All campuses have excellent academics!"
 
             else:
-                response = f"🎯 **{author}, I can help you with:**\n\n"
-                response += "**📊 Score-based suggestions:**\n"
+                response = f"**{author}, I can help you with:**\n\n"
+                response += "**Score-based suggestions:**\n"
                 response += "• *'I got 285 marks, suggest branches'*\n\n"
-                response += "**🎓 Branch selection:**\n"
+                response += "**Branch selection:**\n"
                 response += "• *'Help me choose branch'*\n\n"
-                response += "**🏫 Campus selection:**\n"
+                response += "**Campus selection:**\n"
                 response += "• *'Which campus should I choose'*\n\n"
-                response += "💡 **Pro Tip:** Mention your score for personalized advice!"
+                response += "**Pro Tip:** Mention your score for personalized advice!"
 
         # Add motivational ending
         motivational_endings = [
-            "\n\n🌟 Remember: Success is 10% college, 90% your effort!",
-            "\n\n🚀 Your journey matters more than your destination!",
-            "\n\n💪 Every BITS student has a success story - write yours!",
-            "\n\n✨ The best branch is the one that excites you every morning!"
+            "\n\nRemember: Success is 10% college, 90% your effort!",
+            "\n\nYour journey matters more than your destination!",
+            "\n\nEvery BITS student has a success story - write yours!",
+            "\n\nThe best branch is the one that excites you every morning!"
         ]
 
         import random
@@ -1966,11 +1964,11 @@ class BITSATBot:
                 f"Bhai {author}, comprehensive cutoff data - prepare for trauma"
             ]
 
-        # Campus emojis and descriptions
+        # Campus descriptions
         campus_info = {
-            'pilani': ('🏛️ **PILANI CAMPUS**', 'OG campus vibes'),
-            'goa': ('🏖️ **GOA CAMPUS**', 'Beach life + studies'),
-            'hyderabad': ('🏙️ **HYDERABAD CAMPUS**', 'Tech city energy')
+            'pilani': ('**PILANI CAMPUS**', 'OG campus vibes'),
+            'goa': ('**GOA CAMPUS**', 'Beach life + studies'),
+            'hyderabad': ('**HYDERABAD CAMPUS**', 'Tech city energy')
         }
 
         response = random.choice(intros) + ":\n\n"
@@ -1992,7 +1990,7 @@ class BITSATBot:
                 response += "| Campus | Cutoff Score |\n"
                 response += "|--------|-------------|\n"
 
-                campus_names = {'pilani': '🏛️ Pilani', 'goa': '🏖️ Goa', 'hyderabad': '🏙️ Hyderabad'}
+                campus_names = {'pilani': 'Pilani', 'goa': 'Goa', 'hyderabad': 'Hyderabad'}
                 for campus in ['pilani', 'goa', 'hyderabad']:
                     score = cutoff_data[campus].get(specific_branch, 'N/A')
                     if score != 'N/A':
@@ -2112,15 +2110,15 @@ class BITSATBot:
 
         # Add sassy italic message about max marks
         sassy_messages = [
-            "*Though max marks are 426, I don't think you're skilled enough to reach there, so 390 is the realistic ceiling for you* 😏",
-            "*While the paper is out of 426, let's be honest - 390 is probably your upper limit anyway* 💀",
-            "*Maximum possible is 426, but considering your preparation level, 390 seems more achievable* 😈",
-            "*The exam goes up to 426 marks, but realistically speaking, 390 is where most mortals peak* 🎭",
-            "*Just so you know, 426 is the theoretical max, but 390 is the practical reality for people like us* 😅"
+            "*Though max marks are 426, I don't think you're skilled enough to reach there, so 390 is the realistic ceiling for you*",
+            "*While the paper is out of 426, let's be honest - 390 is probably your upper limit anyway*",
+            "*Maximum possible is 426, but considering your preparation level, 390 seems more achievable*",
+            "*The exam goes up to 426 marks, but realistically speaking, 390 is where most mortals peak*",
+            "*Just so you know, 426 is the theoretical max, but 390 is the practical reality for people like us*"
         ]
 
         response += f"\n{random.choice(sassy_messages)}\n"
-        response += f"\n📊 More detailed info: https://www.bitsadmission.com/FD/BITSAT_cutoffs.html?06012025"
+        response += f"\nMore detailed info: https://www.bitsadmission.com/FD/BITSAT_cutoffs.html?06012025"
 
         # Reset random seed
         random.seed()
@@ -2144,8 +2142,8 @@ class BITSATBot:
                     current_time_ist = datetime.now(ist)
                     current_time = current_time_ist.strftime("%H:%M IST")
                     current_hour = current_time_ist.hour
-                    logger.info(f"🛑 STREAM SHUTDOWN: Reached inactive hours at {current_time} (hour {current_hour})")
-                    logger.info("💰 Exiting comment stream to save Railway hours")
+                    logger.info(f"STREAM SHUTDOWN: Reached inactive hours at {current_time} (hour {current_hour})")
+                    logger.info("Exiting comment stream to save Railway hours")
                     break
 
                 if self.should_respond(comment):
@@ -2198,27 +2196,27 @@ class BITSATBot:
         current_hour = current_time_ist.hour
         time_str = current_time_ist.strftime("%H:%M IST")
 
-        logger.info(f"🤖 Bot starting at {time_str} (hour {current_hour})")
+        logger.info(f"Bot starting at {time_str} (hour {current_hour})")
 
         # Check if bot should be active before even starting
         if not self._is_active_hours():
-            logger.info(f"⏰ Bot starting during inactive hours ({time_str}). Exiting to save Railway hours.")
-            logger.info("💤 Inactive hours: 1 AM - 8:59 AM IST")
-            logger.info("⏰ Active hours: 9 AM - 12:59 AM IST")
-            logger.info("🔄 Bot will restart automatically during active hours")
+            logger.info(f"Bot starting during inactive hours ({time_str}). Exiting to save Railway hours.")
+            logger.info("Inactive hours: 1 AM - 8:59 AM IST")
+            logger.info("Active hours: 9 AM - 12:59 AM IST")
+            logger.info("Bot will restart automatically during active hours")
             return
 
         # Retry authentication up to 3 times
         max_auth_retries = 3
         for attempt in range(max_auth_retries):
-            logger.info(f"🔐 Authentication attempt {attempt + 1}/{max_auth_retries}")
+            logger.info(f"Authentication attempt {attempt + 1}/{max_auth_retries}")
             if self.authenticate():
                 break
             elif attempt < max_auth_retries - 1:
-                logger.info(f"⏳ Retrying authentication in 60 seconds...")
+                logger.info(f"Retrying authentication in 60 seconds...")
                 time.sleep(60)
             else:
-                logger.error("❌ Failed to authenticate after 3 attempts. Exiting.")
+                logger.error("Failed to authenticate after 3 attempts. Exiting.")
                 return
 
         logger.info("BITSAT Bot started successfully!")
@@ -2233,9 +2231,9 @@ class BITSATBot:
                     current_time_ist = datetime.now(ist)
                     current_time = current_time_ist.strftime("%H:%M IST")
                     current_hour = current_time_ist.hour
-                    logger.info(f"🛑 SHUTDOWN: Reached inactive hours at {current_time} (hour {current_hour})")
-                    logger.info("💰 Stopping bot to save Railway hours during night (1 AM - 9 AM IST)")
-                    logger.info("⏰ Bot will restart automatically at 9 AM IST. Good night! 😴")
+                    logger.info(f"SHUTDOWN: Reached inactive hours at {current_time} (hour {current_hour})")
+                    logger.info("Stopping bot to save Railway hours during night (1 AM - 9 AM IST)")
+                    logger.info("Bot will restart automatically at 9 AM IST. Good night!")
                     break
 
                 self.process_comments()
@@ -2246,35 +2244,35 @@ class BITSATBot:
                 error_msg = str(e).lower()
 
                 if "403" in error_msg or "forbidden" in error_msg:
-                    logger.error(f"❌ 403 FORBIDDEN: {e}")
+                    logger.error(f"403 FORBIDDEN: {e}")
                     logger.error("   Possible causes:")
                     logger.error("   • Account banned/suspended")
                     logger.error("   • Rate limited")
                     logger.error("   • Permission issues")
                     logger.error("   • Wrong credentials")
                 elif "429" in error_msg or "rate" in error_msg:
-                    logger.error(f"⏰ RATE LIMITED: {e}")
+                    logger.error(f"RATE LIMITED: {e}")
                     logger.info("Waiting 5 minutes for rate limit to reset...")
                     time.sleep(300)  # Wait 5 minutes
                     continue
                 elif "401" in error_msg or "unauthorized" in error_msg:
-                    logger.error(f"❌ 401 UNAUTHORIZED: {e}")
+                    logger.error(f"401 UNAUTHORIZED: {e}")
                     logger.error("   Check client_id and client_secret")
                 else:
-                    logger.error(f"💥 Unexpected error: {e}")
+                    logger.error(f"Unexpected error: {e}")
 
-                logger.info("🔄 Restarting in 60 seconds...")
+                logger.info("Restarting in 60 seconds...")
                 time.sleep(60)
 
                 # Try to reconnect
                 try:
-                    logger.info("🔐 Attempting to reconnect...")
+                    logger.info("Attempting to reconnect...")
                     if self.authenticate():
-                        logger.info("✅ Reconnected successfully")
+                        logger.info("Reconnected successfully")
                     else:
-                        logger.error("❌ Reconnection failed")
+                        logger.error("Reconnection failed")
                 except Exception as reconnect_error:
-                    logger.error(f"❌ Reconnection error: {reconnect_error}")
+                    logger.error(f"Reconnection error: {reconnect_error}")
                     time.sleep(60)
 
     def _generate_help_response(self, author):
@@ -2329,10 +2327,10 @@ class BITSATBot:
 
         response += "**Note:** Bot understands both English and Hinglish. Responds only to relevant BITSAT queries.\n\n"
         response += "---\n\n"
-        response += "**🤖 NEW: DM CHATBOT FEATURE**\n\n"
+        response += "**NEW: DM CHATBOT FEATURE**\n\n"
         response += "Send me a DM starting with 'hi' to activate chatbot mode!\n"
         response += "I'll chat with you using funny, sassy responses with a bit of Hinglish.\n"
-        response += "Perfect for stress relief during BITSAT prep! 😄\n\n"
+        response += "Perfect for stress relief during BITSAT prep!\n\n"
         response += "---\n"
         response += "*Created by [u/Difficult-Dig7627](https://www.reddit.com/user/Difficult-Dig7627/) for r/bitsatards*"
 
@@ -2464,18 +2462,18 @@ class BITSATBot:
                                 message.reply(chatbot_response)
                                 message.mark_read()
 
-                                logger.info(f"💬 Chatbot replied to {author_name}: {message_body[:30]}...")
+                                logger.info(f"Chatbot replied to {author_name}: {message_body[:30]}...")
                                 time.sleep(3)  # Rate limiting for DMs
 
                             except Exception as dm_error:
-                                logger.error(f"❌ Error in DM chatbot: {dm_error}")
+                                logger.error(f"Error in DM chatbot: {dm_error}")
                                 message.mark_read()
                         else:
                             # Mark non-chatbot DMs as read
                             message.mark_read()
 
         except Exception as dm_error:
-            logger.error(f"❌ Error monitoring DMs: {dm_error}")
+            logger.error(f"Error monitoring DMs: {dm_error}")
 
     def _generate_chatbot_response(self, user_message, username):
         """Generate unique, funny, sassy chatbot response with a bit of Hinglish"""
@@ -2497,7 +2495,6 @@ class BITSATBot:
         response = template.format(
             username=username,
             unique_element=unique_elements['element'],
-            emoji=unique_elements['emoji'],
             hinglish=unique_elements['hinglish']
         )
 
@@ -2509,51 +2506,51 @@ class BITSATBot:
         # Greeting responses
         if any(word in message_lower for word in ['hi', 'hello', 'hey', 'namaste', 'sup']):
             return [
-                "Arre {username}! {emoji} Welcome to my DM dungeon. I'm your friendly neighborhood BITSAT bot who's seen more cutoff tears than a tissue company. {hinglish} What's cooking?",
-                "Hey {username}! {emoji} You've entered the sacred DMs of the cutoff prophet. I predict... you're here because you're stressed about admissions. {unique_element}",
-                "Namaste {username}! {emoji} I'm like Google but with more sass and better jokes. {hinglish} How can I roast... I mean, help you today?",
-                "Sup {username}! {emoji} You've unlocked the secret chatbot mode. I'm like Siri but with daddy issues and BITSAT trauma. {unique_element}",
-                "Hello there {username}! {emoji} I'm the bot who knows more about your future than your horoscope. {hinglish} Spill the tea!"
+                "Arre {username}! Welcome to my DM dungeon. I'm your friendly neighborhood BITSAT bot who's seen more cutoff tears than a tissue company. {hinglish} What's cooking?",
+                "Hey {username}! You've entered the sacred DMs of the cutoff prophet. I predict... you're here because you're stressed about admissions. {unique_element}",
+                "Namaste {username}! I'm like Google but with more sass and better jokes. {hinglish} How can I roast... I mean, help you today?",
+                "Sup {username}! You've unlocked the secret chatbot mode. I'm like Siri but with daddy issues and BITSAT trauma. {unique_element}",
+                "Hello there {username}! I'm the bot who knows more about your future than your horoscope. {hinglish} Spill the tea!"
             ]
 
         # BITSAT/College related
         elif any(word in message_lower for word in ['bitsat', 'cutoff', 'admission', 'college', 'bits', 'score']):
             return [
-                "Ah {username}, talking about BITSAT? {emoji} I've seen more dreams crushed than a hydraulic press. {hinglish} But hey, I'm here to help! {unique_element}",
-                "BITSAT ke baare mein baat kar rahe hain? {emoji} {username}, I'm like WebMD but for college admissions - everything seems scary but usually works out. {unique_element}",
-                "College stress, huh {username}? {emoji} I've counseled more students than a therapist. {hinglish} What's the damage report?",
-                "BITS cutoffs giving you nightmares, {username}? {emoji} Join the club! I'm the president. {unique_element} Let's figure this out together.",
-                "Admission tension? {emoji} {username}, I've seen students go from 'I'm doomed' to 'I'm in BITS' faster than you can say 'backup college'. {hinglish}"
+                "Ah {username}, talking about BITSAT? I've seen more dreams crushed than a hydraulic press. {hinglish} But hey, I'm here to help! {unique_element}",
+                "BITSAT ke baare mein baat kar rahe hain? {username}, I'm like WebMD but for college admissions - everything seems scary but usually works out. {unique_element}",
+                "College stress, huh {username}? I've counseled more students than a therapist. {hinglish} What's the damage report?",
+                "BITS cutoffs giving you nightmares, {username}? Join the club! I'm the president. {unique_element} Let's figure this out together.",
+                "Admission tension? {username}, I've seen students go from 'I'm doomed' to 'I'm in BITS' faster than you can say 'backup college'. {hinglish}"
             ]
 
         # Stress/Anxiety related
         elif any(word in message_lower for word in ['stress', 'worried', 'anxious', 'scared', 'nervous', 'tension']):
             return [
-                "Stress kar rahe ho {username}? {emoji} I'm like a stress ball but with better conversation skills. {unique_element} Take a deep breath!",
-                "Anxiety attack? {emoji} {username}, I've seen more panic than a fire drill. {hinglish} Remember: your worth isn't defined by one exam!",
-                "Worried about the future, {username}? {emoji} I predict... you'll be fine! I'm like a fortune teller but with actual data. {unique_element}",
-                "Tension mein ho? {emoji} {username}, stress is just your brain's way of saying 'I care too much'. {hinglish} Let's channel that energy!",
-                "Scared about results? {emoji} {username}, fear is temporary but regret is forever. {unique_element} You've got this!"
+                "Stress kar rahe ho {username}? I'm like a stress ball but with better conversation skills. {unique_element} Take a deep breath!",
+                "Anxiety attack? {username}, I've seen more panic than a fire drill. {hinglish} Remember: your worth isn't defined by one exam!",
+                "Worried about the future, {username}? I predict... you'll be fine! I'm like a fortune teller but with actual data. {unique_element}",
+                "Tension mein ho? {username}, stress is just your brain's way of saying 'I care too much'. {hinglish} Let's channel that energy!",
+                "Scared about results? {username}, fear is temporary but regret is forever. {unique_element} You've got this!"
             ]
 
         # Motivational/Encouragement
         elif any(word in message_lower for word in ['help', 'advice', 'guidance', 'support', 'motivate']):
             return [
-                "Need advice, {username}? {emoji} I'm like your wise uncle but with better memes. {hinglish} {unique_element}",
-                "Looking for guidance? {emoji} {username}, I'm like GPS but for life decisions - sometimes I take you through weird routes but you reach the destination. {unique_element}",
-                "Support chahiye? {emoji} {username}, I'm here like that friend who always has snacks during exams. {hinglish} What's the situation?",
-                "Motivation needed? {emoji} {username}, you're like a phone on 1% battery - low but still functioning! {unique_element} Let's charge you up!",
-                "Help karna hai? {emoji} {username}, I'm like Wikipedia but with personality and better jokes. {hinglish} Fire away!"
+                "Need advice, {username}? I'm like your wise uncle but with better memes. {hinglish} {unique_element}",
+                "Looking for guidance? {username}, I'm like GPS but for life decisions - sometimes I take you through weird routes but you reach the destination. {unique_element}",
+                "Support chahiye? {username}, I'm here like that friend who always has snacks during exams. {hinglish} What's the situation?",
+                "Motivation needed? {username}, you're like a phone on 1% battery - low but still functioning! {unique_element} Let's charge you up!",
+                "Help karna hai? {username}, I'm like Wikipedia but with personality and better jokes. {hinglish} Fire away!"
             ]
 
         # Random/General conversation
         else:
             return [
-                "Interesting message, {username}! {emoji} I'm processing this with my advanced AI... just kidding, I'm winging it. {hinglish} {unique_element}",
-                "Hmm {username}, {emoji} you've activated my philosophical mode. I'm like Socrates but with WiFi. {unique_element} Tell me more!",
-                "Random chat mode activated! {emoji} {username}, I'm like that friend who responds to everything with either a meme or life advice. {hinglish}",
-                "Interesting perspective, {username}! {emoji} I'm like a rubber duck for debugging life problems. {unique_element} Keep talking!",
-                "Arre {username}, {emoji} you've unlocked my stream-of-consciousness mode. I'm like Twitter but with a character limit on sanity. {hinglish}"
+                "Interesting message, {username}! I'm processing this with my advanced AI... just kidding, I'm winging it. {hinglish} {unique_element}",
+                "Hmm {username}, you've activated my philosophical mode. I'm like Socrates but with WiFi. {unique_element} Tell me more!",
+                "Random chat mode activated! {username}, I'm like that friend who responds to everything with either a meme or life advice. {hinglish}",
+                "Interesting perspective, {username}! I'm like a rubber duck for debugging life problems. {unique_element} Keep talking!",
+                "Arre {username}, you've unlocked my stream-of-consciousness mode. I'm like Twitter but with a character limit on sanity. {hinglish}"
             ]
 
     def _get_unique_elements(self, conversation_hash):
@@ -2575,8 +2572,6 @@ class BITSATBot:
             "My database has more mood swings than a teenager."
         ]
 
-        emojis = ["🤖", "😎", "🎭", "🧠", "⚡", "🎯", "🔥", "💫", "🌟", "✨"]
-
         hinglish_phrases = [
             "Bas kar pagle, rulayega kya?",
             "Tension mat le yaar!",
@@ -2592,7 +2587,6 @@ class BITSATBot:
 
         return {
             'element': elements[hash_num % len(elements)],
-            'emoji': emojis[hash_num % len(emojis)],
             'hinglish': hinglish_phrases[hash_num % len(hinglish_phrases)]
         }
 
