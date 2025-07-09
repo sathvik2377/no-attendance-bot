@@ -11,6 +11,9 @@ import time
 import logging
 import os
 import pytz
+import json
+import hashlib
+import re
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -2125,8 +2128,13 @@ class BITSATBot:
         return response
     
     def process_comments(self):
-        """Process new comments in the subreddit"""
+        """Process new comments in the subreddit and monitor DMs"""
+        processed_messages = set()
+
         try:
+            # Monitor DMs for chatbot functionality
+            self._monitor_dms(processed_messages)
+
             # Skip old comments, only monitor new ones
             logger.info("Starting to monitor new comments only...")
             for comment in self.subreddit.stream.comments(skip_existing=True):
@@ -2320,6 +2328,11 @@ class BITSATBot:
         response += "| Admission check | `can i get ece with 285` |\n\n"
 
         response += "**Note:** Bot understands both English and Hinglish. Responds only to relevant BITSAT queries.\n\n"
+        response += "---\n\n"
+        response += "**🤖 NEW: DM CHATBOT FEATURE**\n\n"
+        response += "Send me a DM starting with 'hi' to activate chatbot mode!\n"
+        response += "I'll chat with you using funny, sassy responses with a bit of Hinglish.\n"
+        response += "Perfect for stress relief during BITSAT prep! 😄\n\n"
         response += "---\n"
         response += "*Created by [u/Difficult-Dig7627](https://www.reddit.com/user/Difficult-Dig7627/) for r/bitsatards*"
 
@@ -2427,6 +2440,161 @@ class BITSATBot:
         response += f"{self._get_random_humor('admission_ending')}"
 
         return response
+
+    def _monitor_dms(self, processed_messages):
+        """Monitor and respond to DMs with chatbot functionality"""
+        try:
+            for message in self.reddit.inbox.unread(limit=5):
+                if hasattr(message, 'subject') and message.id not in processed_messages:
+                    processed_messages.add(message.id)
+
+                    # Check if it's a private message (DM)
+                    if hasattr(message, 'body') and message.subreddit is None:
+                        author_name = message.author.name if message.author else "anonymous"
+                        message_body = message.body.strip()
+
+                        # Activate chatbot for DMs starting with 'hi' or if it's a reply
+                        if (message_body.lower().startswith('hi') or
+                            message.subject.startswith('re:') or
+                            'chatbot' in message_body.lower() or
+                            'hello' in message_body.lower()):
+
+                            try:
+                                chatbot_response = self._generate_chatbot_response(message_body, author_name)
+                                message.reply(chatbot_response)
+                                message.mark_read()
+
+                                logger.info(f"💬 Chatbot replied to {author_name}: {message_body[:30]}...")
+                                time.sleep(3)  # Rate limiting for DMs
+
+                            except Exception as dm_error:
+                                logger.error(f"❌ Error in DM chatbot: {dm_error}")
+                                message.mark_read()
+                        else:
+                            # Mark non-chatbot DMs as read
+                            message.mark_read()
+
+        except Exception as dm_error:
+            logger.error(f"❌ Error monitoring DMs: {dm_error}")
+
+    def _generate_chatbot_response(self, user_message, username):
+        """Generate unique, funny, sassy chatbot response with a bit of Hinglish"""
+        message_lower = user_message.lower().strip()
+
+        # Create a unique hash for this conversation to avoid repeating responses
+        conversation_hash = hashlib.md5(f"{username}_{message_lower}".encode()).hexdigest()[:8]
+
+        # Analyze the message content and generate contextual response
+        response_templates = self._get_contextual_response_templates(message_lower, username)
+
+        # Select a template and customize it
+        template = random.choice(response_templates)
+
+        # Add unique elements based on message hash
+        unique_elements = self._get_unique_elements(conversation_hash)
+
+        # Combine template with unique elements
+        response = template.format(
+            username=username,
+            unique_element=unique_elements['element'],
+            emoji=unique_elements['emoji'],
+            hinglish=unique_elements['hinglish']
+        )
+
+        return response
+
+    def _get_contextual_response_templates(self, message_lower, username):
+        """Get response templates based on message content"""
+
+        # Greeting responses
+        if any(word in message_lower for word in ['hi', 'hello', 'hey', 'namaste', 'sup']):
+            return [
+                "Arre {username}! {emoji} Welcome to my DM dungeon. I'm your friendly neighborhood BITSAT bot who's seen more cutoff tears than a tissue company. {hinglish} What's cooking?",
+                "Hey {username}! {emoji} You've entered the sacred DMs of the cutoff prophet. I predict... you're here because you're stressed about admissions. {unique_element}",
+                "Namaste {username}! {emoji} I'm like Google but with more sass and better jokes. {hinglish} How can I roast... I mean, help you today?",
+                "Sup {username}! {emoji} You've unlocked the secret chatbot mode. I'm like Siri but with daddy issues and BITSAT trauma. {unique_element}",
+                "Hello there {username}! {emoji} I'm the bot who knows more about your future than your horoscope. {hinglish} Spill the tea!"
+            ]
+
+        # BITSAT/College related
+        elif any(word in message_lower for word in ['bitsat', 'cutoff', 'admission', 'college', 'bits', 'score']):
+            return [
+                "Ah {username}, talking about BITSAT? {emoji} I've seen more dreams crushed than a hydraulic press. {hinglish} But hey, I'm here to help! {unique_element}",
+                "BITSAT ke baare mein baat kar rahe hain? {emoji} {username}, I'm like WebMD but for college admissions - everything seems scary but usually works out. {unique_element}",
+                "College stress, huh {username}? {emoji} I've counseled more students than a therapist. {hinglish} What's the damage report?",
+                "BITS cutoffs giving you nightmares, {username}? {emoji} Join the club! I'm the president. {unique_element} Let's figure this out together.",
+                "Admission tension? {emoji} {username}, I've seen students go from 'I'm doomed' to 'I'm in BITS' faster than you can say 'backup college'. {hinglish}"
+            ]
+
+        # Stress/Anxiety related
+        elif any(word in message_lower for word in ['stress', 'worried', 'anxious', 'scared', 'nervous', 'tension']):
+            return [
+                "Stress kar rahe ho {username}? {emoji} I'm like a stress ball but with better conversation skills. {unique_element} Take a deep breath!",
+                "Anxiety attack? {emoji} {username}, I've seen more panic than a fire drill. {hinglish} Remember: your worth isn't defined by one exam!",
+                "Worried about the future, {username}? {emoji} I predict... you'll be fine! I'm like a fortune teller but with actual data. {unique_element}",
+                "Tension mein ho? {emoji} {username}, stress is just your brain's way of saying 'I care too much'. {hinglish} Let's channel that energy!",
+                "Scared about results? {emoji} {username}, fear is temporary but regret is forever. {unique_element} You've got this!"
+            ]
+
+        # Motivational/Encouragement
+        elif any(word in message_lower for word in ['help', 'advice', 'guidance', 'support', 'motivate']):
+            return [
+                "Need advice, {username}? {emoji} I'm like your wise uncle but with better memes. {hinglish} {unique_element}",
+                "Looking for guidance? {emoji} {username}, I'm like GPS but for life decisions - sometimes I take you through weird routes but you reach the destination. {unique_element}",
+                "Support chahiye? {emoji} {username}, I'm here like that friend who always has snacks during exams. {hinglish} What's the situation?",
+                "Motivation needed? {emoji} {username}, you're like a phone on 1% battery - low but still functioning! {unique_element} Let's charge you up!",
+                "Help karna hai? {emoji} {username}, I'm like Wikipedia but with personality and better jokes. {hinglish} Fire away!"
+            ]
+
+        # Random/General conversation
+        else:
+            return [
+                "Interesting message, {username}! {emoji} I'm processing this with my advanced AI... just kidding, I'm winging it. {hinglish} {unique_element}",
+                "Hmm {username}, {emoji} you've activated my philosophical mode. I'm like Socrates but with WiFi. {unique_element} Tell me more!",
+                "Random chat mode activated! {emoji} {username}, I'm like that friend who responds to everything with either a meme or life advice. {hinglish}",
+                "Interesting perspective, {username}! {emoji} I'm like a rubber duck for debugging life problems. {unique_element} Keep talking!",
+                "Arre {username}, {emoji} you've unlocked my stream-of-consciousness mode. I'm like Twitter but with a character limit on sanity. {hinglish}"
+            ]
+
+    def _get_unique_elements(self, conversation_hash):
+        """Generate unique elements based on conversation hash"""
+
+        # Convert hash to numbers for selection
+        hash_num = int(conversation_hash, 16) % 1000
+
+        elements = [
+            "I once calculated that I've prevented more mental breakdowns than a meditation app.",
+            "Fun fact: I've seen more backup plans than a disaster management agency.",
+            "Plot twist: I'm actually powered by student tears and parental expectations.",
+            "Between you and me, I think I'm developing feelings for spreadsheets.",
+            "I've analyzed more 'what if' scenarios than a chess grandmaster.",
+            "Confession: I sometimes dream in cutoff numbers.",
+            "I'm like that friend who remembers everyone's exam dates better than they do.",
+            "Secret: I've memorized more college websites than Google's crawler.",
+            "I once tried to calculate the probability of happiness - results were inconclusive.",
+            "My database has more mood swings than a teenager."
+        ]
+
+        emojis = ["🤖", "😎", "🎭", "🧠", "⚡", "🎯", "🔥", "💫", "🌟", "✨"]
+
+        hinglish_phrases = [
+            "Bas kar pagle, rulayega kya?",
+            "Tension mat le yaar!",
+            "Chill maar, sab theek hoga.",
+            "Arre bhai, relax kar.",
+            "Paagal hai kya? Itna stress kyun?",
+            "Dekh bhai, life mein ups-downs toh aate rehte hain.",
+            "Arre yaar, tu toh serious ho gaya.",
+            "Bhai tension nahi lene ka, main hoon na!",
+            "Chal chal, drama band kar.",
+            "Arre pagal, itna mat soch!"
+        ]
+
+        return {
+            'element': elements[hash_num % len(elements)],
+            'emoji': emojis[hash_num % len(emojis)],
+            'hinglish': hinglish_phrases[hash_num % len(hinglish_phrases)]
+        }
 
 if __name__ == "__main__":
     bot = BITSATBot()
